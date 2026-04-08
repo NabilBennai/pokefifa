@@ -15,7 +15,7 @@ const commonTsRules = {
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'node_modules', '.angular', 'coverage'],
+    ignores: ['dist', 'node_modules', '.angular', 'coverage', 'public/runtime-config.js', 'scripts'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,

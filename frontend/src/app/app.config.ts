@@ -6,6 +6,10 @@ import { API_BASE_URL } from './core/tokens/api-base-url.token';
 import { routes } from './app.routes';
 import { environment } from '../environments/environment';
 
+const runtimeApiBaseUrl =
+  ((globalThis as { __APP_CONFIG__?: { apiBaseUrl?: string } }).__APP_CONFIG__?.apiBaseUrl ??
+    '').trim() || environment.apiBaseUrl;
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
@@ -13,7 +17,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([authInterceptor])),
     {
       provide: API_BASE_URL,
-      useValue: environment.apiBaseUrl,
+      useValue: runtimeApiBaseUrl,
     },
   ],
 };
