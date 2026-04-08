@@ -3,11 +3,14 @@ import { BattleMode, BattleResult, CurrencyType, Prisma, TransactionType } from 
 import { PrismaService } from '../prisma/prisma.service';
 
 type CombatMove = {
+  slug: string;
   name: string;
   type: string;
-  power: number;
+  power: number | null;
   accuracy: number;
 };
+
+type StatusCondition = 'BURN' | 'POISON';
 
 type Combatant = {
   name: string;
@@ -20,6 +23,10 @@ type Combatant = {
   attack: number;
   defense: number;
   speed: number;
+  attackStage: number;
+  defenseStage: number;
+  speedStage: number;
+  statusCondition: StatusCondition | null;
   moves: CombatMove[];
 };
 
@@ -60,6 +67,7 @@ type LiveBattleState = {
 };
 
 const MOVE_SELECT = {
+  slug: true,
   name: true,
   type: true,
   power: true,
@@ -647,9 +655,10 @@ export class BattlesService {
 
       const playerMove = playerActive.moves[moveIndex];
       const aiMove = this.pickMove(opponentActive.moves);
+      const playerSpeed = this.getEffectiveStat(playerActive, 'speed');
+      const opponentSpeed = this.getEffectiveStat(opponentActive, 'speed');
       const firstIsPlayer =
-        playerActive.speed > opponentActive.speed ||
-        (playerActive.speed === opponentActive.speed && Math.random() < 0.5);
+        playerSpeed > opponentSpeed || (playerSpeed === opponentSpeed && Math.random() < 0.5);
 
       state.log.push(`Turn ${state.turn}:`);
       const order = firstIsPlayer
@@ -682,6 +691,37 @@ export class BattlesService {
             state.mustPlayerSwitch = nextPlayer >= 0;
             if (state.mustPlayerSwitch) {
               state.log.push('Choose your next Pokémon.');
+            }
+          }
+        }
+      }
+
+      const livePlayer = state.playerTeam[state.activePlayerIndex];
+      const liveOpponent = state.opponentTeam[state.activeOpponentIndex];
+      if (livePlayer && livePlayer.currentHp > 0) {
+        const tick = this.applyEndTurnStatus(livePlayer);
+        if (tick) {
+          state.log.push(tick);
+          if (livePlayer.currentHp <= 0) {
+            state.log.push(`${livePlayer.name} fainted.`);
+            const nextPlayer = this.firstLivingIndex(state.playerTeam);
+            state.mustPlayerSwitch = nextPlayer >= 0;
+            if (state.mustPlayerSwitch) {
+              state.log.push('Choose your next Pokémon.');
+            }
+          }
+        }
+      }
+      if (!state.mustPlayerSwitch && liveOpponent && liveOpponent.currentHp > 0) {
+        const tick = this.applyEndTurnStatus(liveOpponent);
+        if (tick) {
+          state.log.push(tick);
+          if (liveOpponent.currentHp <= 0) {
+            state.log.push(`${liveOpponent.name} fainted.`);
+            const nextOpponent = this.firstLivingIndex(state.opponentTeam);
+            state.activeOpponentIndex = nextOpponent;
+            if (nextOpponent >= 0) {
+              state.log.push(`Foe sent out ${state.opponentTeam[nextOpponent].name}!`);
             }
           }
         }
@@ -825,6 +865,7 @@ export class BattlesService {
         .slice(0, 4)
         .map((entry) =>
           this.toCombatMove(
+            entry.move.slug,
             entry.move.name,
             entry.move.type,
             entry.move.power,
@@ -843,26 +884,34 @@ export class BattlesService {
       })
       .slice(0, 4)
       .map((entry) =>
-        this.toCombatMove(entry.move.name, entry.move.type, entry.move.power, entry.move.accuracy),
+        this.toCombatMove(
+          entry.move.slug,
+          entry.move.name,
+          entry.move.type,
+          entry.move.power,
+          entry.move.accuracy,
+        ),
       );
 
     if (defaults.length > 0) {
       return defaults;
     }
 
-    return [this.toCombatMove('Struggle', 'Normal', 40, 100)];
+    return [this.toCombatMove('struggle', 'Struggle', 'Normal', 40, 100)];
   }
 
   private toCombatMove(
+    slug: string,
     name: string,
     type: string | null,
     power: number | null,
     accuracy: number | null,
   ): CombatMove {
     return {
+      slug,
       name,
       type: (type ?? 'Normal').toLowerCase(),
-      power: Math.max(1, power ?? 40),
+      power: power === null ? null : Math.max(1, power),
       accuracy: Math.min(100, Math.max(1, accuracy ?? 100)),
     };
   }
@@ -891,6 +940,10 @@ export class BattlesService {
       attack: this.calculateStat(baseAttack, level),
       defense: this.calculateStat(baseDefense, level),
       speed: this.calculateStat(baseSpeed, level),
+      attackStage: 0,
+      defenseStage: 0,
+      speedStage: 0,
+      statusCondition: null,
       moves,
     };
   }
@@ -923,14 +976,16 @@ export class BattlesService {
 
       const moveA = this.pickMove(attackerA.moves);
       const moveB = this.pickMove(attackerB.moves);
+      const speedA = this.getEffectiveStat(attackerA, 'speed');
+      const speedB = this.getEffectiveStat(attackerB, 'speed');
 
       const order: Array<{ actor: Combatant; target: Combatant; move: CombatMove }> =
-        attackerA.speed > attackerB.speed
+        speedA > speedB
           ? [
               { actor: attackerA, target: attackerB, move: moveA },
               { actor: attackerB, target: attackerA, move: moveB },
             ]
-          : attackerA.speed < attackerB.speed
+          : speedA < speedB
             ? [
                 { actor: attackerB, target: attackerA, move: moveB },
                 { actor: attackerA, target: attackerB, move: moveA },
@@ -955,6 +1010,21 @@ export class BattlesService {
         log.push(`${step.actor.name} used ${step.move.name}. ${attackLog}`);
         if (step.target.currentHp <= 0) {
           log.push(`${step.target.name} fainted.`);
+        }
+      }
+
+      const endTurnA = this.applyEndTurnStatus(attackerA);
+      if (endTurnA) {
+        log.push(endTurnA);
+        if (attackerA.currentHp <= 0) {
+          log.push(`${attackerA.name} fainted.`);
+        }
+      }
+      const endTurnB = this.applyEndTurnStatus(attackerB);
+      if (endTurnB) {
+        log.push(endTurnB);
+        if (attackerB.currentHp <= 0) {
+          log.push(`${attackerB.name} fainted.`);
         }
       }
     }
@@ -987,6 +1057,10 @@ export class BattlesService {
       return 'It missed.';
     }
 
+    if (move.power === null) {
+      return this.executeStatusMove(attacker, target, move);
+    }
+
     const stab =
       move.type === attacker.primaryType || move.type === attacker.secondaryType ? 1.2 : 1;
     const effectiveness = this.typeEffectiveness(move.type, [
@@ -998,24 +1072,163 @@ export class BattlesService {
     }
 
     const randomFactor = this.randomFloat(0.85, 1);
+    const attackStat = this.getEffectiveStat(attacker, 'attack');
+    const defenseStat = this.getEffectiveStat(target, 'defense');
     const base =
       (((2 * attacker.level) / 5 + 2) *
         move.power *
-        (attacker.attack / Math.max(1, target.defense))) /
+        (attackStat / Math.max(1, defenseStat))) /
         50 +
       2;
     const damage = Math.max(1, Math.floor(base * stab * effectiveness * randomFactor));
 
     target.currentHp = Math.max(0, target.currentHp - damage);
+    const secondaryStatus = this.applySecondaryStatus(attacker, target, move);
 
     if (effectiveness >= 2) {
-      return `It dealt ${damage} damage. It's super effective.`;
+      return `It dealt ${damage} damage. It's super effective.${secondaryStatus ? ` ${secondaryStatus}` : ''}`;
     }
     if (effectiveness < 1) {
-      return `It dealt ${damage} damage. It's not very effective.`;
+      return `It dealt ${damage} damage. It's not very effective.${secondaryStatus ? ` ${secondaryStatus}` : ''}`;
     }
 
-    return `It dealt ${damage} damage.`;
+    return `It dealt ${damage} damage.${secondaryStatus ? ` ${secondaryStatus}` : ''}`;
+  }
+
+  private executeStatusMove(attacker: Combatant, target: Combatant, move: CombatMove): string {
+    const key = (move.slug || move.name).toLowerCase().replace(/\s+/g, '-');
+    if (['growl'].includes(key)) {
+      return this.applyStageChange(target, 'attack', -1, `${target.name}'s Attack fell.`);
+    }
+    if (['tail-whip', 'leer'].includes(key)) {
+      return this.applyStageChange(target, 'defense', -1, `${target.name}'s Defense fell.`);
+    }
+    if (['screech'].includes(key)) {
+      return this.applyStageChange(target, 'defense', -2, `${target.name}'s Defense sharply fell.`);
+    }
+    if (['string-shot', 'scary-face'].includes(key)) {
+      return this.applyStageChange(target, 'speed', -2, `${target.name}'s Speed harshly fell.`);
+    }
+    if (['agility'].includes(key)) {
+      return this.applyStageChange(attacker, 'speed', 2, `${attacker.name}'s Speed rose sharply.`);
+    }
+    if (['swords-dance'].includes(key)) {
+      return this.applyStageChange(attacker, 'attack', 2, `${attacker.name}'s Attack rose sharply.`);
+    }
+    if (['harden', 'withdraw', 'defense-curl'].includes(key)) {
+      return this.applyStageChange(attacker, 'defense', 1, `${attacker.name}'s Defense rose.`);
+    }
+    if (['toxic', 'poison-powder'].includes(key)) {
+      if (target.statusCondition) {
+        return 'But it failed. Target already has a status condition.';
+      }
+      target.statusCondition = 'POISON';
+      return `${target.name} was poisoned.`;
+    }
+    if (['will-o-wisp'].includes(key)) {
+      if (target.statusCondition) {
+        return 'But it failed. Target already has a status condition.';
+      }
+      target.statusCondition = 'BURN';
+      return `${target.name} was burned.`;
+    }
+    return 'But nothing happened.';
+  }
+
+  private applySecondaryStatus(attacker: Combatant, target: Combatant, move: CombatMove): string | null {
+    if (target.statusCondition) {
+      return null;
+    }
+    const key = (move.slug || move.name).toLowerCase().replace(/\s+/g, '-');
+    const burnChance =
+      key === 'fire-blast'
+        ? 0.3
+        : ['ember', 'flamethrower', 'fire-punch'].includes(key)
+          ? 0.1
+          : 0;
+    if (burnChance > 0 && Math.random() < burnChance) {
+      target.statusCondition = 'BURN';
+      return `${target.name} was burned.`;
+    }
+
+    const poisonChance = ['poison-sting', 'sludge'].includes(key) ? 0.3 : 0;
+    if (poisonChance > 0 && Math.random() < poisonChance) {
+      target.statusCondition = 'POISON';
+      return `${target.name} was poisoned.`;
+    }
+
+    const atkDropChance = key === 'bubble-beam' ? 0.1 : 0;
+    if (atkDropChance > 0 && Math.random() < atkDropChance) {
+      this.modifyStage(target, 'speed', -1);
+      return `${target.name}'s Speed fell.`;
+    }
+
+    if (key === 'acid' && Math.random() < 0.1) {
+      this.modifyStage(target, 'defense', -1);
+      return `${target.name}'s Defense fell.`;
+    }
+
+    if (key === 'aurora-beam' && Math.random() < 0.1) {
+      this.modifyStage(target, 'attack', -1);
+      return `${target.name}'s Attack fell.`;
+    }
+
+    if (key === 'metal-claw' && Math.random() < 0.1) {
+      this.modifyStage(attacker, 'attack', 1);
+      return `${attacker.name}'s Attack rose.`;
+    }
+
+    return null;
+  }
+
+  private applyEndTurnStatus(combatant: Combatant): string | null {
+    if (!combatant.statusCondition || combatant.currentHp <= 0) {
+      return null;
+    }
+    const tick = Math.max(1, Math.floor(combatant.maxHp / 8));
+    combatant.currentHp = Math.max(0, combatant.currentHp - tick);
+    if (combatant.statusCondition === 'BURN') {
+      return `${combatant.name} is hurt by its burn (${tick}).`;
+    }
+    return `${combatant.name} is hurt by poison (${tick}).`;
+  }
+
+  private applyStageChange(
+    combatant: Combatant,
+    stat: 'attack' | 'defense' | 'speed',
+    delta: number,
+    successMessage: string,
+  ): string {
+    const changed = this.modifyStage(combatant, stat, delta);
+    if (!changed) {
+      return 'But it failed.';
+    }
+    return successMessage;
+  }
+
+  private modifyStage(combatant: Combatant, stat: 'attack' | 'defense' | 'speed', delta: number): boolean {
+    const key = stat === 'attack' ? 'attackStage' : stat === 'defense' ? 'defenseStage' : 'speedStage';
+    const current = combatant[key];
+    const next = Math.max(-6, Math.min(6, current + delta));
+    if (next === current) {
+      return false;
+    }
+    combatant[key] = next;
+    return true;
+  }
+
+  private getStageMultiplier(stage: number): number {
+    if (stage >= 0) {
+      return (2 + stage) / 2;
+    }
+    return 2 / (2 + Math.abs(stage));
+  }
+
+  private getEffectiveStat(combatant: Combatant, stat: 'attack' | 'defense' | 'speed'): number {
+    const base = stat === 'attack' ? combatant.attack : stat === 'defense' ? combatant.defense : combatant.speed;
+    const stage = stat === 'attack' ? combatant.attackStage : stat === 'defense' ? combatant.defenseStage : combatant.speedStage;
+    const burnPenalty = stat === 'attack' && combatant.statusCondition === 'BURN' ? 0.75 : 1;
+    return Math.max(1, Math.floor(base * this.getStageMultiplier(stage) * burnPenalty));
   }
 
   private typeEffectiveness(attackType: string, defenderTypes: Array<string | null>): number {
@@ -1163,6 +1376,7 @@ export class BattlesService {
               0,
               Math.round((player.currentHp / Math.max(1, player.maxHp)) * 100),
             ),
+            statusCondition: player.statusCondition,
             moves: player.moves,
             teamRemaining: playerRemaining,
           }
@@ -1173,6 +1387,7 @@ export class BattlesService {
         slug: combatant.slug,
         hp: combatant.currentHp,
         maxHp: combatant.maxHp,
+        statusCondition: combatant.statusCondition,
         isActive: index === state.activePlayerIndex,
         isFainted: combatant.currentHp <= 0,
         canSwitch:
@@ -1189,6 +1404,7 @@ export class BattlesService {
               0,
               Math.round((opponent.currentHp / Math.max(1, opponent.maxHp)) * 100),
             ),
+            statusCondition: opponent.statusCondition,
             teamRemaining: opponentRemaining,
           }
         : null,

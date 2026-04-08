@@ -39,6 +39,13 @@ export class BattleLiveModalComponent implements OnChanges {
     return `https://img.pokemondb.net/sprites/home/normal/${slug}.png`;
   }
 
+  protected statusLabel(status: 'BURN' | 'POISON' | null | undefined): string | null {
+    if (!status) {
+      return null;
+    }
+    return status === 'BURN' ? 'BRN' : 'PSN';
+  }
+
   protected chooseMove(index: number): void {
     if (this.pending) {
       return;

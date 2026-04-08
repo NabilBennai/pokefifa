@@ -73,10 +73,12 @@ export type LiveBattleState = {
     hp: number;
     maxHp: number;
     hpPercent: number;
+    statusCondition: 'BURN' | 'POISON' | null;
     moves: Array<{
+      slug: string;
       name: string;
       type: string;
-      power: number;
+      power: number | null;
       accuracy: number;
     }>;
     teamRemaining: number;
@@ -87,6 +89,7 @@ export type LiveBattleState = {
     slug: string;
     hp: number;
     maxHp: number;
+    statusCondition: 'BURN' | 'POISON' | null;
     isActive: boolean;
     isFainted: boolean;
     canSwitch: boolean;
@@ -97,6 +100,7 @@ export type LiveBattleState = {
     hp: number;
     maxHp: number;
     hpPercent: number;
+    statusCondition: 'BURN' | 'POISON' | null;
     teamRemaining: number;
   } | null;
   log: string[];

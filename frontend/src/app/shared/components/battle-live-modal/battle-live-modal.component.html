@@ -11,7 +11,14 @@
       <div class="fr-stage">
         @if (battle.opponent) {
           <div class="fr-foe-panel">
-            <p class="fr-name">{{ battle.opponent.name }}</p>
+            <p class="fr-name">
+              {{ battle.opponent.name }}
+              @if (statusLabel(battle.opponent.statusCondition); as condition) {
+                <span class="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+                  {{ condition }}
+                </span>
+              }
+            </p>
             <p class="fr-level">Remaining {{ battle.opponent.teamRemaining }}</p>
             <div class="fr-hp-track">
               <div
@@ -39,7 +46,14 @@
             />
           </div>
           <div class="fr-player-panel">
-            <p class="fr-name">{{ battle.player.name }}</p>
+            <p class="fr-name">
+              {{ battle.player.name }}
+              @if (statusLabel(battle.player.statusCondition); as condition) {
+                <span class="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+                  {{ condition }}
+                </span>
+              }
+            </p>
             <p class="fr-level">
               HP {{ battle.player.hp }}/{{ battle.player.maxHp }} - Remaining
               {{ battle.player.teamRemaining }}
@@ -92,6 +106,9 @@
                 <p class="font-bold">{{ member.name }}</p>
                 <p class="mt-0.5 text-[10px] uppercase text-slate-500">
                   HP {{ member.hp }}/{{ member.maxHp }}
+                  @if (statusLabel(member.statusCondition); as condition) {
+                    - {{ condition }}
+                  }
                   @if (member.isFainted) {
                     - FAINTED
                   } @else if (member.isActive) {
@@ -119,7 +136,7 @@
               >
                 <p class="font-bold">{{ move.name }}</p>
                 <p class="mt-0.5 text-[10px] uppercase text-slate-500">
-                  {{ move.type }} - Pow {{ move.power }} - Acc {{ move.accuracy }}
+                  {{ move.type }} - Pow {{ move.power ?? '--' }} - Acc {{ move.accuracy }}
                 </p>
               </button>
             }
