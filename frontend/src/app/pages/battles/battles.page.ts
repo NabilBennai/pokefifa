@@ -7,10 +7,11 @@ import { Team } from '../../core/models/team.models';
 import { AuthService } from '../../core/services/auth.service';
 import { BattlesService } from '../../core/services/battles.service';
 import { TeamsService } from '../../core/services/teams.service';
+import { BattleReplayModalComponent } from '../../shared/components/battle-replay-modal/battle-replay-modal.component';
 
 @Component({
   selector: 'app-battles-page',
-  imports: [DatePipe],
+  imports: [DatePipe, BattleReplayModalComponent],
   templateUrl: './battles.page.html',
 })
 export class BattlesPageComponent {
@@ -26,6 +27,7 @@ export class BattlesPageComponent {
   protected readonly selectedTeamId = signal<string | null>(null);
   protected readonly history = signal<BattleHistoryItem[]>([]);
   protected readonly lastResult = signal<AiBattleResponse | null>(null);
+  protected readonly replayOpen = signal(false);
 
   constructor() {
     this.loadData();
@@ -80,6 +82,7 @@ export class BattlesPageComponent {
       .subscribe({
         next: (response) => {
           this.lastResult.set(response);
+          this.replayOpen.set(true);
           this.authService.refreshProfile().subscribe();
           this.loadData();
         },
@@ -91,5 +94,9 @@ export class BattlesPageComponent {
 
   protected teamLabel(team: Team): string {
     return team.isDefault ? `${team.name} (Default)` : team.name;
+  }
+
+  protected closeReplay(): void {
+    this.replayOpen.set(false);
   }
 }

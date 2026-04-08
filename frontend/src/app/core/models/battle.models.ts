@@ -16,6 +16,20 @@ export type AiBattleResponse = {
     power?: number;
     rating?: number;
   };
+  participants?: {
+    player: {
+      name: string;
+      slug: string | null;
+    };
+    opponent: {
+      name: string;
+      slug: string | null;
+    };
+  };
+  gameEnded?: boolean;
+  winnerSide?: 'A' | 'B' | 'DRAW';
+  turns?: number;
+  battleLog?: string[];
   createdAt: string;
 };
 

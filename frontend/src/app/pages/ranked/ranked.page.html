@@ -79,7 +79,7 @@
           </p>
           <p class="mt-2 text-lg font-black text-slate-900">{{ lastBattle()!.result }}</p>
           <p class="mt-1 text-sm text-slate-700">
-            +{{ lastBattle()!.rewards.coins }} coins · +{{ lastBattle()!.rewards.xp }} xp ·
+            +{{ lastBattle()!.rewards.coins }} coins � +{{ lastBattle()!.rewards.xp }} xp �
             @if (lastBattle()!.ratingDelta >= 0) {
               +{{ lastBattle()!.ratingDelta }}
             } @else {
@@ -87,6 +87,13 @@
             }
             rating
           </p>
+          <button
+            type="button"
+            class="btn-poke-soft mt-3 px-3 py-2 text-xs"
+            (click)="replayOpen.set(true)"
+          >
+            Replay Ranked Battle
+          </button>
         </div>
       }
     </article>
@@ -128,3 +135,10 @@
     <p class="text-sm text-slate-500">Loading ranked overview...</p>
   }
 </section>
+
+<app-battle-replay-modal
+  [open]="replayOpen()"
+  [battle]="lastBattle()"
+  title="Ranked Battle Replay"
+  (closed)="closeReplay()"
+/>
