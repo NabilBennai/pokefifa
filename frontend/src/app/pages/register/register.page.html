@@ -1,25 +1,19 @@
 <section class="mx-auto w-full max-w-md">
-  <div class="panel-pokedex p-7 sm:p-8">
-    <div class="flex items-center gap-2">
-      <span class="pokeball-dot"></span>
-      <p class="text-xs font-bold uppercase tracking-[0.14em] text-red-700">Club Onboarding</p>
-    </div>
-    <h1 class="mt-2 text-2xl font-black tracking-tight text-slate-900">Create Your Club</h1>
+  <div class="glass-panel p-7 sm:p-8">
+    <h1 class="text-2xl font-bold tracking-tight text-slate-900">Create Account</h1>
     <p class="mt-2 text-sm text-slate-600">
-      Start with starter packs, build your first roster, and enter competitive play.
+      Start your journey and unlock your first competitive squad.
     </p>
 
     <form class="mt-6 space-y-4" [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <div>
-        <label for="username" class="mb-1 block text-sm font-semibold text-slate-700"
-          >Username</label
-        >
+        <label for="username" class="mb-1 block text-sm font-medium text-slate-700">Username</label>
         <input
           id="username"
           type="text"
           formControlName="username"
           autocomplete="username"
-          class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100"
+          class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
           placeholder="yourtrainername"
         />
         @if (form.controls.username.touched && form.controls.username.invalid) {
@@ -28,13 +22,13 @@
       </div>
 
       <div>
-        <label for="email" class="mb-1 block text-sm font-semibold text-slate-700">Email</label>
+        <label for="email" class="mb-1 block text-sm font-medium text-slate-700">Email</label>
         <input
           id="email"
           type="email"
           formControlName="email"
           autocomplete="email"
-          class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100"
+          class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
           placeholder="trainer@pokefifa.gg"
         />
         @if (form.controls.email.touched && form.controls.email.invalid) {
@@ -43,15 +37,13 @@
       </div>
 
       <div>
-        <label for="password" class="mb-1 block text-sm font-semibold text-slate-700"
-          >Password</label
-        >
+        <label for="password" class="mb-1 block text-sm font-medium text-slate-700">Password</label>
         <input
           id="password"
           type="password"
           formControlName="password"
           autocomplete="new-password"
-          class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100"
+          class="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
           placeholder="At least 8 characters"
         />
         @if (form.controls.password.touched && form.controls.password.invalid) {
@@ -60,7 +52,7 @@
       </div>
 
       @if (submitError()) {
-        <div class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {{ submitError() }}
         </div>
       }
@@ -68,7 +60,7 @@
       <button
         type="submit"
         [disabled]="submitting()"
-        class="btn-poke w-full disabled:cursor-not-allowed disabled:opacity-60"
+        class="inline-flex w-full items-center justify-center rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
       >
         @if (submitting()) {
           Creating account...
@@ -80,7 +72,7 @@
 
     <p class="mt-5 text-sm text-slate-600">
       Already have an account?
-      <a routerLink="/login" class="font-bold text-red-700 hover:text-red-800">Sign in</a>
+      <a routerLink="/login" class="font-semibold text-brand-700 hover:text-brand-800">Sign in</a>
     </p>
   </div>
 </section>

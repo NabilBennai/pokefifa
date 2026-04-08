@@ -1,136 +1,35 @@
-<section class="space-y-8">
-  <div class="panel-pokedex arena-shell p-8">
-    <div class="flex flex-wrap items-end justify-between gap-6">
-      <div>
-        <p class="text-xs font-bold uppercase tracking-[0.14em] text-red-700">Club Overview</p>
-        <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900">
-          Welcome back, {{ user()?.username }}
-        </h1>
-        <p class="mt-2 max-w-2xl text-sm text-slate-600">
-          Run the full FUT loop: buy packs, build squad depth, battle for rewards, and optimize your
-          club economy.
-        </p>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <a routerLink="/packs" class="btn-poke px-4 py-2 text-sm">Open Packs</a>
-        <a routerLink="/my-club" class="btn-poke-soft px-4 py-2 text-sm">My Club</a>
-        <a routerLink="/store" class="btn-poke-soft px-4 py-2 text-sm">Store</a>
-        <a routerLink="/squad" class="btn-poke-soft px-4 py-2 text-sm">Squad</a>
-        <a routerLink="/battles" class="btn-poke-soft px-4 py-2 text-sm">Battles</a>
-        <a routerLink="/ranked" class="btn-poke-soft px-4 py-2 text-sm">Ranked</a>
-      </div>
-    </div>
+<section class="space-y-6">
+  <div class="glass-panel p-8">
+    <h1 class="text-3xl font-black tracking-tight text-slate-900">Trainer Dashboard</h1>
+    <p class="mt-2 text-sm text-slate-600">
+      Protected route: only authenticated users can access this page.
+    </p>
   </div>
 
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <article class="stat-tile">
-      <h2 class="text-xs font-bold uppercase tracking-wide text-slate-500">Rating</h2>
-      <p class="mt-1 text-2xl font-black text-slate-900">{{ user()?.rating }}</p>
+    <article class="glass-panel p-5">
+      <h2 class="text-sm font-semibold text-slate-500">Trainer</h2>
+      <p class="mt-1 text-lg font-bold text-slate-900">{{ user()?.username }}</p>
     </article>
-    <article class="stat-tile">
-      <h2 class="text-xs font-bold uppercase tracking-wide text-slate-500">Level</h2>
-      <p class="mt-1 text-2xl font-black text-slate-900">{{ user()?.level }}</p>
+    <article class="glass-panel p-5">
+      <h2 class="text-sm font-semibold text-slate-500">Rating</h2>
+      <p class="mt-1 text-lg font-bold text-slate-900">{{ user()?.rating }}</p>
     </article>
-    <article class="stat-tile">
-      <h2 class="text-xs font-bold uppercase tracking-wide text-slate-500">My Creatures</h2>
-      @if (loadingCreatures()) {
-        <p class="mt-1 text-sm font-semibold text-slate-500">Loading...</p>
-      } @else {
-        <p class="mt-1 text-2xl font-black text-slate-900">{{ creatureCount() }}</p>
-      }
-      @if (creaturesError()) {
-        <p class="mt-1 text-xs text-red-700">{{ creaturesError() }}</p>
-      }
+    <article class="glass-panel p-5">
+      <h2 class="text-sm font-semibold text-slate-500">Level</h2>
+      <p class="mt-1 text-lg font-bold text-slate-900">{{ user()?.level }}</p>
     </article>
-    <article class="stat-tile">
-      <h2 class="text-xs font-bold uppercase tracking-wide text-slate-500">Unopened Packs</h2>
-      @if (loadingPacks()) {
-        <p class="mt-1 text-sm font-semibold text-slate-500">Loading...</p>
-      } @else {
-        <p class="mt-1 text-2xl font-black text-slate-900">{{ unopenedPackCount() }}</p>
-      }
-      @if (packsError()) {
-        <p class="mt-1 text-xs text-red-700">{{ packsError() }}</p>
-      }
+    <article class="glass-panel p-5">
+      <h2 class="text-sm font-semibold text-slate-500">Coins</h2>
+      <p class="mt-1 text-lg font-bold text-slate-900">{{ user()?.coins }}</p>
     </article>
-    <article class="stat-tile">
-      <h2 class="text-xs font-bold uppercase tracking-wide text-slate-500">Coins</h2>
-      <p class="mt-1 text-2xl font-black text-slate-900">{{ user()?.coins }}</p>
+    <article class="glass-panel p-5">
+      <h2 class="text-sm font-semibold text-slate-500">Gems</h2>
+      <p class="mt-1 text-lg font-bold text-slate-900">{{ user()?.gems }}</p>
     </article>
-    <article class="stat-tile">
-      <h2 class="text-xs font-bold uppercase tracking-wide text-slate-500">Gems</h2>
-      <p class="mt-1 text-2xl font-black text-slate-900">{{ user()?.gems }}</p>
+    <article class="glass-panel p-5">
+      <h2 class="text-sm font-semibold text-slate-500">Shards</h2>
+      <p class="mt-1 text-lg font-bold text-slate-900">{{ user()?.shards }}</p>
     </article>
-  </div>
-
-  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-    <a
-      routerLink="/packs"
-      class="panel-pokedex block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
-    >
-      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">Packs</p>
-      <h2 class="mt-2 text-xl font-black text-slate-900">Manage and Open Packs</h2>
-      <p class="mt-2 text-sm text-slate-600">
-        See unopened packs, open them with animation, and review opening history.
-      </p>
-    </a>
-    <a
-      routerLink="/my-club"
-      class="panel-pokedex block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
-    >
-      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">My Club</p>
-      <h2 class="mt-2 text-xl font-black text-slate-900">View Your Creature Cards</h2>
-      <p class="mt-2 text-sm text-slate-600">
-        Inspect your full collection with type chips, rarity tags, and stat cards.
-      </p>
-    </a>
-    <a
-      routerLink="/store"
-      class="panel-pokedex block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
-    >
-      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">Store</p>
-      <h2 class="mt-2 text-xl font-black text-slate-900">Buy Packs</h2>
-      <p class="mt-2 text-sm text-slate-600">Use coins/gems to purchase active packs.</p>
-    </a>
-    <a
-      routerLink="/squad"
-      class="panel-pokedex block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
-    >
-      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">Squad</p>
-      <h2 class="mt-2 text-xl font-black text-slate-900">Set Your Team</h2>
-      <p class="mt-2 text-sm text-slate-600">
-        Choose up to 6 creatures and mark your default lineup.
-      </p>
-    </a>
-    <a
-      routerLink="/battles"
-      class="panel-pokedex block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
-    >
-      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">Battles</p>
-      <h2 class="mt-2 text-xl font-black text-slate-900">Fight AI Matches</h2>
-      <p class="mt-2 text-sm text-slate-600">
-        Earn coins/xp and climb rating from your saved squad.
-      </p>
-    </a>
-    <a
-      routerLink="/ranked"
-      class="panel-pokedex block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
-    >
-      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">Ranked</p>
-      <h2 class="mt-2 text-xl font-black text-slate-900">Divisions and Seasons</h2>
-      <p class="mt-2 text-sm text-slate-600">
-        Compete in ranked queue and claim end-of-season rewards.
-      </p>
-    </a>
-    <a
-      routerLink="/inventory"
-      class="panel-pokedex block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
-    >
-      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">Inventory</p>
-      <h2 class="mt-2 text-xl font-black text-slate-900">Track Assets</h2>
-      <p class="mt-2 text-sm text-slate-600">
-        View currencies, item stock, and core progression totals.
-      </p>
-    </a>
   </div>
 </section>

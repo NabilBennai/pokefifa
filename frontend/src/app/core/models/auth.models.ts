@@ -18,7 +18,6 @@ export type AuthUser = {
 export type AuthResponse = {
   accessToken: string;
   user: AuthUser;
-  starterPacksGranted?: number;
 };
 
 export type LoginPayload = {

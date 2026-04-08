@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PackSource, User } from '@prisma/client';
+import { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { SignOptions } from 'jsonwebtoken';
 import { ConfigService } from '@nestjs/config';
@@ -34,9 +34,7 @@ export class AuthService {
     private readonly mailService: MailService,
   ) {}
 
-  async register(
-    dto: RegisterDto,
-  ): Promise<{ accessToken: string; user: PublicUser; starterPacksGranted: number }> {
+  async register(dto: RegisterDto): Promise<{ accessToken: string; user: PublicUser }> {
     const email = dto.email.trim().toLowerCase();
     const username = dto.username.trim();
     const passwordHash = await bcrypt.hash(dto.password, 12);
@@ -52,21 +50,17 @@ export class AuthService {
       });
 
       await this.mailService.sendWelcomeEmail(user.email, user.username);
-      const starterPacksGranted = await this.ensureStarterPacks(user.id);
 
       return {
         accessToken: await this.signToken(user.id, user.email),
         user,
-        starterPacksGranted,
       };
     } catch {
       throw new ConflictException('Email is already in use.');
     }
   }
 
-  async login(
-    dto: LoginDto,
-  ): Promise<{ accessToken: string; user: PublicUser; starterPacksGranted: number }> {
+  async login(dto: LoginDto): Promise<{ accessToken: string; user: PublicUser }> {
     const email = dto.email.trim().toLowerCase();
     const user = await this.prisma.user.findUnique({
       where: { email },
@@ -81,12 +75,9 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials.');
     }
 
-    const starterPacksGranted = await this.ensureStarterPacks(user.id);
-
     return {
       accessToken: await this.signToken(user.id, user.email),
       user: await this.getProfile(user.id),
-      starterPacksGranted,
     };
   }
 
@@ -115,46 +106,6 @@ export class AuthService {
       },
       { expiresIn },
     );
-  }
-
-  private async ensureStarterPacks(userId: string): Promise<number> {
-    const existingPacksCount = await this.prisma.userPack.count({
-      where: { userId },
-    });
-    if (existingPacksCount > 0) {
-      return 0;
-    }
-
-    const packSlug = this.configService.get<string>('STARTER_PACK_SLUG', 'bronze_pack');
-    const starterPackCount = Number.parseInt(
-      this.configService.get<string>('STARTER_PACK_COUNT', '5'),
-      10,
-    );
-    const safePackCount = Number.isFinite(starterPackCount) ? Math.max(0, starterPackCount) : 5;
-    if (safePackCount === 0) {
-      return 0;
-    }
-
-    const packDefinition = await this.prisma.packDefinition.findFirst({
-      where: {
-        slug: packSlug,
-        isActive: true,
-      },
-      select: { id: true },
-    });
-    if (!packDefinition) {
-      return 0;
-    }
-
-    await this.prisma.userPack.createMany({
-      data: Array.from({ length: safePackCount }, () => ({
-        userId,
-        packDefinitionId: packDefinition.id,
-        source: PackSource.GIFT,
-      })),
-    });
-
-    return safePackCount;
   }
 
   private publicUserSelect() {
