@@ -108,6 +108,124 @@ export class BattlesService {
     };
   }
 
+  async runRankedBattle(userId: string, requestedTeamId?: string) {
+    const playerTeam = await this.resolveTeam(userId, requestedTeamId);
+    if (playerTeam.slots.length === 0) {
+      throw new BadRequestException('Selected team has no creatures.');
+    }
+
+    const playerPower = this.computeTeamPower(playerTeam.slots);
+
+    const battle = await this.prisma.$transaction(async (tx) => {
+      const before = await tx.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: { rating: true, xp: true, level: true },
+      });
+
+      const opponentRating = Math.max(100, before.rating + Math.round(this.randomFloat(-120, 120)));
+      const powerBias = (playerPower - opponentRating * 3.2) / 400;
+      const roll = this.randomFloat(-1, 1) + powerBias;
+
+      let result: BattleResult = BattleResult.DRAW;
+      if (roll > 0.2) {
+        result = BattleResult.WIN;
+      } else if (roll < -0.2) {
+        result = BattleResult.LOSS;
+      }
+
+      const actual = result === BattleResult.WIN ? 1 : result === BattleResult.DRAW ? 0.5 : 0;
+      const expected = 1 / (1 + 10 ** ((opponentRating - before.rating) / 400));
+      const ratingDelta = Math.round(28 * (actual - expected));
+
+      const coinsAwarded =
+        result === BattleResult.WIN ? 180 : result === BattleResult.DRAW ? 95 : 55;
+      const xpAwarded = result === BattleResult.WIN ? 130 : result === BattleResult.DRAW ? 80 : 45;
+
+      const xpAfter = before.xp + xpAwarded;
+      const levelGain = Math.floor(xpAfter / 1000);
+      const normalizedXp = xpAfter % 1000;
+      const levelAfter = before.level + levelGain;
+      const ratingAfter = Math.max(0, before.rating + ratingDelta);
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          coins: { increment: coinsAwarded },
+          xp: normalizedXp,
+          level: levelAfter,
+          rating: ratingAfter,
+        },
+      });
+
+      const createdBattle = await tx.battle.create({
+        data: {
+          mode: BattleMode.RANKED,
+          playerAId: userId,
+          playerATeamId: playerTeam.id,
+          resultForA: result,
+          playerARatingBefore: before.rating,
+          playerARatingAfter: ratingAfter,
+          playerBRatingBefore: opponentRating,
+          playerBRatingAfter: opponentRating,
+          coinsAwardedA: coinsAwarded,
+          battleLogJson: {
+            simulation: true,
+            queue: 'ranked',
+            playerPower,
+            xpAwarded,
+            ratingDelta,
+            expectedScore: expected,
+          },
+          finishedAt: new Date(),
+        },
+      });
+
+      await tx.currencyTransaction.create({
+        data: {
+          userId,
+          currencyType: CurrencyType.COINS,
+          amount: coinsAwarded,
+          transactionType: TransactionType.BATTLE_REWARD,
+          referenceId: createdBattle.id,
+          metadata: {
+            mode: 'RANKED',
+            result,
+            ratingDelta,
+          },
+        },
+      });
+
+      return {
+        createdBattle,
+        result,
+        coinsAwarded,
+        xpAwarded,
+        ratingDelta,
+        opponentRating,
+      };
+    });
+
+    return {
+      battleId: battle.createdBattle.id,
+      result: battle.result,
+      rewards: {
+        coins: battle.coinsAwarded,
+        xp: battle.xpAwarded,
+      },
+      ratingDelta: battle.ratingDelta,
+      team: {
+        id: playerTeam.id,
+        name: playerTeam.name,
+        power: playerPower,
+      },
+      opponent: {
+        name: 'Ranked Opponent',
+        rating: battle.opponentRating,
+      },
+      createdAt: battle.createdBattle.createdAt,
+    };
+  }
+
   async getMyBattleHistory(userId: string) {
     const battles = await this.prisma.battle.findMany({
       where: {

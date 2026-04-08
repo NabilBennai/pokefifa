@@ -13,7 +13,8 @@ export type AiBattleResponse = {
   };
   opponent: {
     name: string;
-    power: number;
+    power?: number;
+    rating?: number;
   };
   createdAt: string;
 };

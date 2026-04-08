@@ -9,6 +9,7 @@ import { LoginPageComponent } from './pages/login/login.page';
 import { MyClubPageComponent } from './pages/my-club/my-club.page';
 import { PacksPageComponent } from './pages/packs/packs.page';
 import { RegisterPageComponent } from './pages/register/register.page';
+import { RankedPageComponent } from './pages/ranked/ranked.page';
 import { SquadPageComponent } from './pages/squad/squad.page';
 import { StorePageComponent } from './pages/store/store.page';
 
@@ -70,6 +71,12 @@ export const routes: Routes = [
     path: 'inventory',
     component: InventoryPageComponent,
     title: 'Pokefifa | Inventory',
+    canActivate: [authGuard],
+  },
+  {
+    path: 'ranked',
+    component: RankedPageComponent,
+    title: 'Pokefifa | Ranked',
     canActivate: [authGuard],
   },
   {

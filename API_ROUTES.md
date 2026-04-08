@@ -32,4 +32,10 @@ POST /packs/:id/open
 
 Battles
 POST /battles/ai
+POST /battles/ranked
 GET /battles/history/me
+
+Ranked
+GET /ranked/overview
+POST /ranked/season/claim
+POST /ranked/season/reset (x-admin-key header)

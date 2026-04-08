@@ -80,6 +80,13 @@
           Battles
         </a>
         <a
+          routerLink="/ranked"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+        >
+          Ranked
+        </a>
+        <a
           routerLink="/inventory"
           routerLinkActive="bg-red-100 text-red-800"
           class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
@@ -166,6 +173,14 @@
             (click)="closeMenu()"
           >
             Battles
+          </a>
+          <a
+            routerLink="/ranked"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+          >
+            Ranked
           </a>
           <a
             routerLink="/inventory"

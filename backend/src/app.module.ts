@@ -9,6 +9,7 @@ import { InventoryModule } from './inventory/inventory.module';
 import { MailModule } from './mail/mail.module';
 import { PacksModule } from './packs/packs.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RankedModule } from './ranked/ranked.module';
 import { SpeciesModule } from './species/species.module';
 import { TeamsModule } from './teams/teams.module';
 
@@ -24,6 +25,7 @@ import { TeamsModule } from './teams/teams.module';
     InventoryModule,
     TeamsModule,
     BattlesModule,
+    RankedModule,
   ],
   controllers: [AppController],
   providers: [AppService],

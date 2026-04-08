@@ -9,11 +9,10 @@ import { AuthService } from '../../core/services/auth.service';
 import { BattlesService } from '../../core/services/battles.service';
 import { RankedService } from '../../core/services/ranked.service';
 import { TeamsService } from '../../core/services/teams.service';
-import { BattleReplayModalComponent } from '../../shared/components/battle-replay-modal/battle-replay-modal.component';
 
 @Component({
   selector: 'app-ranked-page',
-  imports: [DatePipe, BattleReplayModalComponent],
+  imports: [DatePipe],
   templateUrl: './ranked.page.html',
 })
 export class RankedPageComponent {
@@ -32,7 +31,6 @@ export class RankedPageComponent {
   protected readonly teams = signal<Team[]>([]);
   protected readonly selectedTeamId = signal<string | null>(null);
   protected readonly lastBattle = signal<AiBattleResponse | null>(null);
-  protected readonly replayOpen = signal(false);
 
   constructor() {
     this.loadData();
@@ -84,7 +82,6 @@ export class RankedPageComponent {
       .subscribe({
         next: (response) => {
           this.lastBattle.set(response);
-          this.replayOpen.set(true);
           this.success.set(`Ranked match finished: ${response.result}.`);
           this.authService.refreshProfile().subscribe();
           this.loadData();
@@ -119,9 +116,5 @@ export class RankedPageComponent {
 
   protected teamLabel(team: Team): string {
     return team.isDefault ? `${team.name} (Default)` : team.name;
-  }
-
-  protected closeReplay(): void {
-    this.replayOpen.set(false);
   }
 }
