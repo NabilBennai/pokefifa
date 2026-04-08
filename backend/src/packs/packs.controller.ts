@@ -1,9 +1,8 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/types/authenticated-user.type';
 import { PacksService } from './packs.service';
-import { PurchasePackDto } from './dto/purchase-pack.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('packs')
@@ -38,23 +37,5 @@ export class PacksController {
     }
 
     return this.packsService.openPack(user.userId, id);
-  }
-
-  @Get('store')
-  async getStore() {
-    return this.packsService.getStorePacks();
-  }
-
-  @Post('purchase/:packDefinitionId')
-  async purchasePack(
-    @CurrentUser() user: AuthenticatedUser | undefined,
-    @Param('packDefinitionId') packDefinitionId: string,
-    @Body() dto: PurchasePackDto,
-  ) {
-    if (!user) {
-      return null;
-    }
-
-    return this.packsService.purchasePack(user.userId, packDefinitionId, dto.currencyType);
   }
 }

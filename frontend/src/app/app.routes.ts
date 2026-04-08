@@ -4,6 +4,8 @@ import { guestOnlyGuard } from './core/guards/guest-only.guard';
 import { DashboardPageComponent } from './pages/dashboard/dashboard.page';
 import { HomePageComponent } from './pages/home/home.page';
 import { LoginPageComponent } from './pages/login/login.page';
+import { MyClubPageComponent } from './pages/my-club/my-club.page';
+import { PacksPageComponent } from './pages/packs/packs.page';
 import { RegisterPageComponent } from './pages/register/register.page';
 
 export const routes: Routes = [
@@ -28,6 +30,18 @@ export const routes: Routes = [
     path: 'dashboard',
     component: DashboardPageComponent,
     title: 'Pokefifa | Dashboard',
+    canActivate: [authGuard],
+  },
+  {
+    path: 'packs',
+    component: PacksPageComponent,
+    title: 'Pokefifa | Packs',
+    canActivate: [authGuard],
+  },
+  {
+    path: 'my-club',
+    component: MyClubPageComponent,
+    title: 'Pokefifa | My Club',
     canActivate: [authGuard],
   },
   {

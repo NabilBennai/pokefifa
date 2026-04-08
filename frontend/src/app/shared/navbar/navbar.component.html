@@ -1,20 +1,24 @@
-<nav class="sticky top-0 z-50 border-b border-white/60 bg-white/70 backdrop-blur-xl">
+<nav class="sticky top-0 z-50 border-b border-red-100/70 bg-white/80 backdrop-blur-xl">
   <div class="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
     <a
       routerLink="/"
-      class="inline-flex items-center gap-3 text-lg font-semibold tracking-tight text-slate-900"
+      class="inline-flex items-center gap-3 text-lg font-extrabold tracking-tight text-slate-900"
     >
       <span
-        class="inline-flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-black text-white"
+        class="relative inline-flex size-10 items-center justify-center overflow-hidden rounded-full border-2 border-slate-900 bg-white"
       >
-        PF
+        <span class="absolute inset-x-0 top-0 h-1/2 bg-brand-500"></span>
+        <span class="absolute inset-x-0 bottom-0 h-1/2 bg-white"></span>
+        <span
+          class="z-10 inline-flex size-4 rounded-full border-2 border-slate-900 bg-white"
+        ></span>
       </span>
       Pokefifa
     </a>
 
     <button
       type="button"
-      class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 md:hidden"
+      class="inline-flex items-center rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 md:hidden"
       (click)="toggleMenu()"
       [attr.aria-expanded]="menuOpen()"
       aria-label="Toggle navigation"
@@ -25,9 +29,9 @@
     <div class="hidden items-center gap-2 md:flex">
       <a
         routerLink="/"
-        routerLinkActive="bg-brand-100 text-brand-800"
+        routerLinkActive="bg-red-100 text-red-800"
         [routerLinkActiveOptions]="{ exact: true }"
-        class="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+        class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
       >
         Home
       </a>
@@ -35,45 +39,53 @@
       @if (isAuthenticated()) {
         <a
           routerLink="/dashboard"
-          routerLinkActive="bg-brand-100 text-brand-800"
-          class="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
         >
           Dashboard
         </a>
-        <span class="mx-2 text-sm text-slate-600">Hi, {{ user()?.username }}</span>
-        <button
-          type="button"
-          class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
-          (click)="logout()"
+        <a
+          routerLink="/my-club"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
         >
-          Logout
-        </button>
+          My Club
+        </a>
+        <a
+          routerLink="/packs"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+        >
+          Packs
+        </a>
+        <span
+          class="mx-1 inline-flex items-center gap-2 rounded-full bg-yellow-50 px-3 py-1 text-xs font-semibold text-slate-700"
+        >
+          <span class="pokeball-dot"></span>
+          {{ user()?.username }}
+        </span>
+        <button type="button" class="btn-poke" (click)="logout()">Logout</button>
       } @else {
         <a
           routerLink="/login"
-          routerLinkActive="bg-brand-100 text-brand-800"
-          class="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
         >
           Login
         </a>
-        <a
-          routerLink="/register"
-          class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
-        >
-          Register
-        </a>
+        <a routerLink="/register" class="btn-poke">Register</a>
       }
     </div>
   </div>
 
   @if (menuOpen()) {
-    <div class="border-t border-white/70 bg-white/80 px-4 py-4 md:hidden">
+    <div class="border-t border-red-100 bg-white/90 px-4 py-4 md:hidden">
       <div class="flex flex-col gap-2">
         <a
           routerLink="/"
           [routerLinkActiveOptions]="{ exact: true }"
-          routerLinkActive="bg-brand-100 text-brand-800"
-          class="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
           (click)="closeMenu()"
         >
           Home
@@ -81,36 +93,40 @@
         @if (isAuthenticated()) {
           <a
             routerLink="/dashboard"
-            routerLinkActive="bg-brand-100 text-brand-800"
-            class="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
             (click)="closeMenu()"
           >
             Dashboard
           </a>
-          <span class="px-3 py-1 text-sm text-slate-600">Logged in as {{ user()?.username }}</span>
-          <button
-            type="button"
-            class="rounded-lg bg-slate-900 px-3 py-2 text-left text-sm font-semibold text-white"
-            (click)="logout()"
+          <a
+            routerLink="/my-club"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
           >
-            Logout
-          </button>
+            My Club
+          </a>
+          <a
+            routerLink="/packs"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+          >
+            Packs
+          </a>
+          <span class="px-3 py-1 text-sm text-slate-600">{{ user()?.username }}</span>
+          <button type="button" class="btn-poke w-full" (click)="logout()">Logout</button>
         } @else {
           <a
             routerLink="/login"
-            routerLinkActive="bg-brand-100 text-brand-800"
-            class="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
             (click)="closeMenu()"
           >
             Login
           </a>
-          <a
-            routerLink="/register"
-            class="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white"
-            (click)="closeMenu()"
-          >
-            Register
-          </a>
+          <a routerLink="/register" class="btn-poke w-full" (click)="closeMenu()">Register</a>
         }
       </div>
     </div>

@@ -1,80 +1,77 @@
 <section class="space-y-8">
-  <div class="glass-panel overflow-hidden">
-    <div class="grid gap-8 p-8 md:grid-cols-[1.2fr_0.8fr] md:p-12">
+  <div class="panel-pokedex hero-grid overflow-hidden p-8 md:p-12">
+    <div class="grid gap-10 md:grid-cols-[1.2fr_0.8fr]">
       <div class="space-y-6">
         <span
-          class="inline-flex items-center rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-800"
+          class="inline-flex items-center gap-2 rounded-full border border-red-200 bg-white/85 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-red-700"
         >
-          Tactical Creature Battles
+          <span class="pokeball-dot"></span>
+          Ultimate Team Creature Arena
         </span>
-        <h1 class="max-w-2xl text-4xl font-black tracking-tight text-slate-900 sm:text-5xl">
-          Build Your Team, Open Packs, Climb The Ranked Ladder
+
+        <h1 class="max-w-3xl text-4xl font-black leading-tight text-slate-900 sm:text-5xl">
+          Build a Legendary Club,
+          <span class="text-brand-600">Open Packs</span>, Dominate Ranked Battles
         </h1>
+
         <p class="max-w-2xl text-base leading-relaxed text-slate-700 sm:text-lg">
-          Pokefifa combines squad-building strategy with creature collecting. Train species,
-          optimize movesets, and earn rewards through PvP and AI battles.
+          Pokefifa blends FUT progression with monster battling. Collect creatures, stack your
+          roster depth, optimize move pools, and climb the competitive ladder.
         </p>
 
         <div class="flex flex-wrap gap-3">
           @if (isAuthenticated()) {
-            <span
-              class="rounded-lg bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-800"
-            >
-              Logged in as {{ user()?.username }}
-            </span>
+            <a routerLink="/dashboard" class="btn-poke px-6">Go to Dashboard</a>
+            <span class="btn-poke-soft">Signed in as {{ user()?.username }}</span>
           } @else {
-            <a
-              routerLink="/register"
-              class="rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
-            >
-              Create Account
-            </a>
-            <a
-              routerLink="/login"
-              class="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
-            >
-              Login
-            </a>
+            <a routerLink="/register" class="btn-poke px-6">Create Club</a>
+            <a routerLink="/login" class="btn-poke-soft px-6">Login</a>
           }
         </div>
       </div>
 
-      <div class="grid gap-4 sm:grid-cols-2 md:grid-cols-1">
-        <div class="rounded-2xl border border-white/60 bg-white/70 p-5">
-          <p class="text-sm font-semibold text-slate-500">Modes</p>
-          <p class="mt-2 text-xl font-bold text-slate-900">Casual, Ranked, AI</p>
-        </div>
-        <div class="rounded-2xl border border-white/60 bg-white/70 p-5">
-          <p class="text-sm font-semibold text-slate-500">Progression</p>
-          <p class="mt-2 text-xl font-bold text-slate-900">XP, Rating, Seasonal Rewards</p>
-        </div>
-        <div class="rounded-2xl border border-white/60 bg-white/70 p-5">
-          <p class="text-sm font-semibold text-slate-500">Collection</p>
-          <p class="mt-2 text-xl font-bold text-slate-900">Species, Items, Packs</p>
-        </div>
+      <div class="grid gap-4">
+        <article class="rounded-2xl border border-red-100 bg-white/90 p-5 shadow-sm">
+          <p class="text-xs font-bold uppercase tracking-wider text-red-600">Pack Economy</p>
+          <p class="mt-2 text-xl font-black text-slate-900">Bronze / Silver / Elite / Event</p>
+        </article>
+        <article class="rounded-2xl border border-yellow-100 bg-white/90 p-5 shadow-sm">
+          <p class="text-xs font-bold uppercase tracking-wider text-amber-600">Battle Modes</p>
+          <p class="mt-2 text-xl font-black text-slate-900">Casual, Ranked, AI</p>
+        </article>
+        <article class="rounded-2xl border border-sky-100 bg-white/90 p-5 shadow-sm">
+          <p class="text-xs font-bold uppercase tracking-wider text-sky-600">Progression</p>
+          <p class="mt-2 text-xl font-black text-slate-900">Level, XP, Rating, Currencies</p>
+        </article>
       </div>
     </div>
   </div>
 
   <div class="grid gap-6 md:grid-cols-3">
-    <article class="glass-panel p-6">
-      <h2 class="text-lg font-bold text-slate-900">1. Create a Trainer Account</h2>
+    <article class="panel-pokedex p-6">
+      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">Step 1</p>
+      <h2 class="mt-2 text-lg font-black text-slate-900">Create Your Trainer Identity</h2>
       <p class="mt-2 text-sm leading-relaxed text-slate-700">
-        Register with email, choose a unique username, and secure your account with a strong
-        password.
+        Register with your username and secure credentials. Your club starts with gift packs for
+        your first roster.
       </p>
     </article>
-    <article class="glass-panel p-6">
-      <h2 class="text-lg font-bold text-slate-900">2. Build Your Core Team</h2>
+
+    <article class="panel-pokedex p-6">
+      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">Step 2</p>
+      <h2 class="mt-2 text-lg font-black text-slate-900">Open Packs and Scout Talent</h2>
       <p class="mt-2 text-sm leading-relaxed text-slate-700">
-        Collect creatures through packs, tune team composition, and pick moves that complement your
-        battle strategy.
+        Reveal creatures and items from weighted drops. Build a balanced squad by rarity, type, and
+        stat profile.
       </p>
     </article>
-    <article class="glass-panel p-6">
-      <h2 class="text-lg font-bold text-slate-900">3. Compete and Progress</h2>
+
+    <article class="panel-pokedex p-6">
+      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">Step 3</p>
+      <h2 class="mt-2 text-lg font-black text-slate-900">Compete for Elite Status</h2>
       <p class="mt-2 text-sm leading-relaxed text-slate-700">
-        Enter ranked battles to increase rating, earn currencies, and unlock long-term progression.
+        Enter ranked battles, earn rewards, and push your rating. Improve your club each cycle with
+        strategic upgrades.
       </p>
     </article>
   </div>

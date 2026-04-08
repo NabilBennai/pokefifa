@@ -1,6 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CurrencyType, PackSource, TransactionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 type WeightedItem = {
@@ -38,134 +37,6 @@ export class PacksService {
     return {
       totalUnopened,
       packs: unopened,
-    };
-  }
-
-  async getStorePacks() {
-    const packs = await this.prisma.packDefinition.findMany({
-      where: {
-        isActive: true,
-      },
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        type: true,
-        coinPrice: true,
-        gemPrice: true,
-        description: true,
-      },
-      orderBy: [{ type: 'asc' }, { name: 'asc' }],
-    });
-
-    return {
-      total: packs.length,
-      packs,
-    };
-  }
-
-  async purchasePack(userId: string, packDefinitionId: string, currencyType?: CurrencyType) {
-    const packDefinition = await this.prisma.packDefinition.findFirst({
-      where: {
-        id: packDefinitionId,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        type: true,
-        coinPrice: true,
-        gemPrice: true,
-      },
-    });
-
-    if (!packDefinition) {
-      throw new NotFoundException('Pack is not available.');
-    }
-
-    const chosenCurrency = currencyType ?? this.resolvePreferredCurrency(packDefinition);
-    if (chosenCurrency === CurrencyType.COINS && !packDefinition.coinPrice) {
-      throw new BadRequestException('This pack cannot be purchased with coins.');
-    }
-    if (chosenCurrency === CurrencyType.GEMS && !packDefinition.gemPrice) {
-      throw new BadRequestException('This pack cannot be purchased with gems.');
-    }
-    if (chosenCurrency === CurrencyType.SHARDS) {
-      throw new BadRequestException('Packs cannot be purchased with shards.');
-    }
-
-    const amount =
-      chosenCurrency === CurrencyType.COINS ? packDefinition.coinPrice! : packDefinition.gemPrice!;
-
-    const result = await this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          coins: true,
-          gems: true,
-        },
-      });
-
-      if (!user) {
-        throw new NotFoundException('User not found.');
-      }
-
-      if (chosenCurrency === CurrencyType.COINS && user.coins < amount) {
-        throw new BadRequestException('Not enough coins.');
-      }
-      if (chosenCurrency === CurrencyType.GEMS && user.gems < amount) {
-        throw new BadRequestException('Not enough gems.');
-      }
-
-      await tx.user.update({
-        where: { id: userId },
-        data:
-          chosenCurrency === CurrencyType.COINS
-            ? { coins: { decrement: amount } }
-            : { gems: { decrement: amount } },
-      });
-
-      const userPack = await tx.userPack.create({
-        data: {
-          userId,
-          packDefinitionId: packDefinition.id,
-          source: PackSource.SHOP,
-        },
-        select: {
-          id: true,
-          createdAt: true,
-        },
-      });
-
-      await tx.currencyTransaction.create({
-        data: {
-          userId,
-          currencyType: chosenCurrency,
-          amount: -amount,
-          transactionType: TransactionType.PACK_PURCHASE,
-          referenceId: userPack.id,
-          metadata: {
-            packDefinitionId: packDefinition.id,
-            packSlug: packDefinition.slug,
-          },
-        },
-      });
-
-      return userPack;
-    });
-
-    return {
-      purchasedPack: {
-        id: result.id,
-        createdAt: result.createdAt,
-        packDefinition,
-      },
-      spent: {
-        currencyType: chosenCurrency,
-        amount,
-      },
     };
   }
 
@@ -476,18 +347,5 @@ export class PacksService {
     }
 
     return Math.max(0, parsed);
-  }
-
-  private resolvePreferredCurrency(packDefinition: {
-    coinPrice: number | null;
-    gemPrice: number | null;
-  }) {
-    if (packDefinition.coinPrice !== null) {
-      return CurrencyType.COINS;
-    }
-    if (packDefinition.gemPrice !== null) {
-      return CurrencyType.GEMS;
-    }
-    throw new BadRequestException('Pack has no valid price.');
   }
 }
