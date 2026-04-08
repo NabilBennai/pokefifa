@@ -2,16 +2,16 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
-import { AiBattleResponse, BattleHistoryItem } from '../../core/models/battle.models';
+import { BattleHistoryItem, LiveBattleState } from '../../core/models/battle.models';
 import { Team } from '../../core/models/team.models';
 import { AuthService } from '../../core/services/auth.service';
 import { BattlesService } from '../../core/services/battles.service';
 import { TeamsService } from '../../core/services/teams.service';
-import { BattleReplayModalComponent } from '../../shared/components/battle-replay-modal/battle-replay-modal.component';
+import { BattleLiveModalComponent } from '../../shared/components/battle-live-modal/battle-live-modal.component';
 
 @Component({
   selector: 'app-battles-page',
-  imports: [DatePipe, BattleReplayModalComponent],
+  imports: [DatePipe, BattleLiveModalComponent],
   templateUrl: './battles.page.html',
 })
 export class BattlesPageComponent {
@@ -22,12 +22,13 @@ export class BattlesPageComponent {
   protected readonly user = this.authService.user;
   protected readonly loading = signal(false);
   protected readonly fighting = signal(false);
+  protected readonly actionPending = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly teams = signal<Team[]>([]);
   protected readonly selectedTeamId = signal<string | null>(null);
   protected readonly history = signal<BattleHistoryItem[]>([]);
-  protected readonly lastResult = signal<AiBattleResponse | null>(null);
-  protected readonly replayOpen = signal(false);
+  protected readonly liveBattle = signal<LiveBattleState | null>(null);
+  protected readonly liveOpen = signal(false);
 
   constructor() {
     this.loadData();
@@ -73,21 +74,47 @@ export class BattlesPageComponent {
 
   protected runAiBattle(): void {
     this.error.set(null);
-    this.lastResult.set(null);
+    this.liveBattle.set(null);
     this.fighting.set(true);
 
     this.battlesService
-      .runAiBattle(this.selectedTeamId() ?? undefined)
+      .startLiveBattle(this.selectedTeamId() ?? undefined)
       .pipe(finalize(() => this.fighting.set(false)))
       .subscribe({
         next: (response) => {
-          this.lastResult.set(response);
-          this.replayOpen.set(true);
-          this.authService.refreshProfile().subscribe();
-          this.loadData();
+          this.liveBattle.set(response);
+          this.liveOpen.set(true);
         },
         error: (error: HttpErrorResponse) => {
           this.error.set(error.error?.message ?? 'Battle failed.');
+        },
+      });
+  }
+
+  protected playMove(moveIndex: number): void {
+    const battle = this.liveBattle();
+    if (!battle || battle.finished) {
+      return;
+    }
+
+    this.actionPending.set(true);
+    this.battlesService
+      .playLiveTurn(battle.battleId, moveIndex)
+      .pipe(finalize(() => this.actionPending.set(false)))
+      .subscribe({
+        next: (state) => {
+          this.liveBattle.set(state);
+          if (state.finished) {
+            this.authService.refreshProfile().subscribe();
+            this.loadData();
+            setTimeout(() => {
+              this.liveOpen.set(false);
+              this.liveBattle.set(null);
+            }, 1000);
+          }
+        },
+        error: (error: HttpErrorResponse) => {
+          this.error.set(error.error?.message ?? 'Turn failed.');
         },
       });
   }
@@ -97,6 +124,7 @@ export class BattlesPageComponent {
   }
 
   protected closeReplay(): void {
-    this.replayOpen.set(false);
+    this.liveOpen.set(false);
+    this.liveBattle.set(null);
   }
 }

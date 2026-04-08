@@ -51,3 +51,36 @@ export type BattleHistoryResponse = {
   total: number;
   battles: BattleHistoryItem[];
 };
+
+export type LiveBattleState = {
+  battleId: string;
+  mode: 'LIVE';
+  status: 'IN_PROGRESS' | 'FINISHED';
+  turn: number;
+  finished: boolean;
+  winnerSide: 'A' | 'B' | 'DRAW' | null;
+  player: {
+    name: string;
+    slug: string;
+    hp: number;
+    maxHp: number;
+    hpPercent: number;
+    moves: Array<{
+      name: string;
+      type: string;
+      power: number;
+      accuracy: number;
+    }>;
+    teamRemaining: number;
+  } | null;
+  opponent: {
+    name: string;
+    slug: string;
+    hp: number;
+    maxHp: number;
+    hpPercent: number;
+    teamRemaining: number;
+  } | null;
+  log: string[];
+  latestMessage: string | null;
+};

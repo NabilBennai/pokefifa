@@ -37,6 +37,19 @@ type SimulationResult = {
   ended: boolean;
 };
 
+type LiveBattleState = {
+  status: 'IN_PROGRESS' | 'FINISHED';
+  turn: number;
+  log: string[];
+  playerTeamName: string;
+  opponentTeamName: string;
+  playerTeam: Combatant[];
+  opponentTeam: Combatant[];
+  activePlayerIndex: number;
+  activeOpponentIndex: number;
+  winner: 'A' | 'B' | 'DRAW' | null;
+};
+
 const MOVE_SELECT = {
   name: true,
   type: true,
@@ -439,6 +452,171 @@ export class BattlesService {
     };
   }
 
+  async startLiveBattle(userId: string, requestedTeamId?: string) {
+    const playerTeamData = await this.resolveTeam(userId, requestedTeamId);
+    if (playerTeamData.slots.length === 0) {
+      throw new BadRequestException('Selected team has no creatures.');
+    }
+
+    const playerTeam = this.toCombatTeam(playerTeamData.name, playerTeamData.slots);
+    const averageLevel = this.averageLevel(playerTeam.combatants);
+    const opponentTeam = await this.generateOpponentTeam(
+      playerTeam.combatants.length,
+      averageLevel,
+      'AI Trainer',
+    );
+
+    const state: LiveBattleState = {
+      status: 'IN_PROGRESS',
+      turn: 1,
+      log: [
+        `Go! ${playerTeam.combatants[0]?.name ?? 'Unknown'}!`,
+        `Foe sent out ${opponentTeam.combatants[0]?.name ?? 'Unknown'}!`,
+      ],
+      playerTeamName: playerTeamData.name,
+      opponentTeamName: opponentTeam.name,
+      playerTeam: this.cloneCombatants(playerTeam.combatants),
+      opponentTeam: this.cloneCombatants(opponentTeam.combatants),
+      activePlayerIndex: 0,
+      activeOpponentIndex: 0,
+      winner: null,
+    };
+
+    const createdBattle = await this.prisma.battle.create({
+      data: {
+        mode: BattleMode.AI,
+        playerAId: userId,
+        playerATeamId: playerTeamData.id,
+        battleLogJson: state as Prisma.JsonObject,
+      },
+    });
+
+    return this.toLiveBattleResponse(createdBattle.id, state);
+  }
+
+  async getLiveBattle(userId: string, battleId: string) {
+    const battle = await this.prisma.battle.findFirst({
+      where: {
+        id: battleId,
+        playerAId: userId,
+      },
+      select: {
+        id: true,
+        battleLogJson: true,
+      },
+    });
+    if (!battle) {
+      throw new NotFoundException('Live battle not found.');
+    }
+
+    const state = this.parseLiveState(battle.battleLogJson);
+    return this.toLiveBattleResponse(battle.id, state);
+  }
+
+  async playLiveBattleTurn(userId: string, battleId: string, moveIndex: number) {
+    const battle = await this.prisma.battle.findFirst({
+      where: {
+        id: battleId,
+        playerAId: userId,
+      },
+      select: {
+        id: true,
+        battleLogJson: true,
+        playerATeamId: true,
+      },
+    });
+    if (!battle) {
+      throw new NotFoundException('Live battle not found.');
+    }
+
+    const state = this.parseLiveState(battle.battleLogJson);
+    if (state.status === 'FINISHED') {
+      return this.toLiveBattleResponse(battle.id, state);
+    }
+
+    this.normalizeActiveIndexes(state);
+    const playerActive = state.playerTeam[state.activePlayerIndex];
+    const opponentActive = state.opponentTeam[state.activeOpponentIndex];
+
+    if (!playerActive || playerActive.currentHp <= 0) {
+      throw new BadRequestException('No active player creature available.');
+    }
+    if (!opponentActive || opponentActive.currentHp <= 0) {
+      throw new BadRequestException('No active opponent creature available.');
+    }
+
+    if (moveIndex < 0 || moveIndex >= playerActive.moves.length) {
+      throw new BadRequestException('Invalid move index.');
+    }
+
+    const playerMove = playerActive.moves[moveIndex];
+    const aiMove = this.pickMove(opponentActive.moves);
+    const firstIsPlayer =
+      playerActive.speed > opponentActive.speed ||
+      (playerActive.speed === opponentActive.speed && Math.random() < 0.5);
+
+    state.log.push(`Turn ${state.turn}:`);
+    const order = firstIsPlayer
+      ? [
+          { actor: playerActive, target: opponentActive, move: playerMove, side: 'A' as const },
+          { actor: opponentActive, target: playerActive, move: aiMove, side: 'B' as const },
+        ]
+      : [
+          { actor: opponentActive, target: playerActive, move: aiMove, side: 'B' as const },
+          { actor: playerActive, target: opponentActive, move: playerMove, side: 'A' as const },
+        ];
+
+    for (const step of order) {
+      if (step.actor.currentHp <= 0 || step.target.currentHp <= 0) {
+        continue;
+      }
+      const outcome = this.executeAttack(step.actor, step.target, step.move);
+      state.log.push(`${step.actor.name} used ${step.move.name}. ${outcome}`);
+
+      if (step.target.currentHp <= 0) {
+        state.log.push(`${step.target.name} fainted.`);
+        if (step.side === 'A') {
+          const nextOpponent = this.firstLivingIndex(state.opponentTeam);
+          state.activeOpponentIndex = nextOpponent;
+          if (nextOpponent >= 0) {
+            state.log.push(`Foe sent out ${state.opponentTeam[nextOpponent].name}!`);
+          }
+        } else {
+          const nextPlayer = this.firstLivingIndex(state.playerTeam);
+          state.activePlayerIndex = nextPlayer;
+          if (nextPlayer >= 0) {
+            state.log.push(`Go! ${state.playerTeam[nextPlayer].name}!`);
+          }
+        }
+      }
+    }
+
+    const remainingHpA = state.playerTeam.reduce((sum, c) => sum + Math.max(0, c.currentHp), 0);
+    const remainingHpB = state.opponentTeam.reduce((sum, c) => sum + Math.max(0, c.currentHp), 0);
+
+    if (remainingHpA <= 0 || remainingHpB <= 0) {
+      state.status = 'FINISHED';
+      state.winner = remainingHpA > remainingHpB ? 'A' : remainingHpB > remainingHpA ? 'B' : 'DRAW';
+      state.log.push(`Battle ended: ${state.winner}.`);
+      await this.finalizeLiveBattle(userId, battle.id, battle.playerATeamId, state);
+      return this.toLiveBattleResponse(battle.id, state);
+    }
+
+    state.turn += 1;
+    if (state.log.length > 220) {
+      state.log = state.log.slice(state.log.length - 220);
+    }
+
+    await this.prisma.battle.update({
+      where: { id: battle.id },
+      data: {
+        battleLogJson: state as Prisma.JsonObject,
+      },
+    });
+
+    return this.toLiveBattleResponse(battle.id, state);
+  }
+
   private async resolveTeam(userId: string, requestedTeamId?: string): Promise<TeamData> {
     const where: Prisma.TeamWhereInput = requestedTeamId
       ? { id: requestedTeamId, userId }
@@ -814,6 +992,148 @@ export class BattlesService {
 
   private calculateStat(base: number, level: number) {
     return Math.floor((2 * base * level) / 100) + 5;
+  }
+
+  private cloneCombatants(combatants: Combatant[]): Combatant[] {
+    return combatants.map((combatant) => ({
+      ...combatant,
+      moves: combatant.moves.map((move) => ({ ...move })),
+    }));
+  }
+
+  private parseLiveState(raw: Prisma.JsonValue | null): LiveBattleState {
+    if (!raw || typeof raw !== 'object') {
+      throw new BadRequestException('Invalid live battle state.');
+    }
+    return raw as unknown as LiveBattleState;
+  }
+
+  private normalizeActiveIndexes(state: LiveBattleState): void {
+    if (
+      state.activePlayerIndex < 0 ||
+      !state.playerTeam[state.activePlayerIndex] ||
+      state.playerTeam[state.activePlayerIndex].currentHp <= 0
+    ) {
+      state.activePlayerIndex = this.firstLivingIndex(state.playerTeam);
+    }
+
+    if (
+      state.activeOpponentIndex < 0 ||
+      !state.opponentTeam[state.activeOpponentIndex] ||
+      state.opponentTeam[state.activeOpponentIndex].currentHp <= 0
+    ) {
+      state.activeOpponentIndex = this.firstLivingIndex(state.opponentTeam);
+    }
+  }
+
+  private toLiveBattleResponse(battleId: string, state: LiveBattleState) {
+    this.normalizeActiveIndexes(state);
+
+    const player = state.playerTeam[state.activePlayerIndex];
+    const opponent = state.opponentTeam[state.activeOpponentIndex];
+    const playerRemaining = state.playerTeam.filter((c) => c.currentHp > 0).length;
+    const opponentRemaining = state.opponentTeam.filter((c) => c.currentHp > 0).length;
+
+    return {
+      battleId,
+      mode: 'LIVE',
+      status: state.status,
+      turn: state.turn,
+      finished: state.status === 'FINISHED',
+      winnerSide: state.winner,
+      player: player
+        ? {
+            name: player.name,
+            slug: player.slug,
+            hp: player.currentHp,
+            maxHp: player.maxHp,
+            hpPercent: Math.max(
+              0,
+              Math.round((player.currentHp / Math.max(1, player.maxHp)) * 100),
+            ),
+            moves: player.moves,
+            teamRemaining: playerRemaining,
+          }
+        : null,
+      opponent: opponent
+        ? {
+            name: opponent.name,
+            slug: opponent.slug,
+            hp: opponent.currentHp,
+            maxHp: opponent.maxHp,
+            hpPercent: Math.max(
+              0,
+              Math.round((opponent.currentHp / Math.max(1, opponent.maxHp)) * 100),
+            ),
+            teamRemaining: opponentRemaining,
+          }
+        : null,
+      log: state.log,
+      latestMessage: state.log[state.log.length - 1] ?? null,
+    };
+  }
+
+  private async finalizeLiveBattle(
+    userId: string,
+    battleId: string,
+    playerTeamId: string,
+    state: LiveBattleState,
+  ): Promise<void> {
+    const result = this.winnerToResult(state.winner ?? 'DRAW');
+    const coinsAwarded = result === BattleResult.WIN ? 130 : result === BattleResult.DRAW ? 70 : 40;
+    const xpAwarded = result === BattleResult.WIN ? 90 : result === BattleResult.DRAW ? 55 : 30;
+    const ratingDelta = result === BattleResult.WIN ? 18 : result === BattleResult.DRAW ? 0 : -12;
+
+    await this.prisma.$transaction(async (tx) => {
+      const before = await tx.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: { rating: true, xp: true, level: true },
+      });
+
+      const xpAfter = before.xp + xpAwarded;
+      const levelGain = Math.floor(xpAfter / 1000);
+      const normalizedXp = xpAfter % 1000;
+      const levelAfter = before.level + levelGain;
+      const ratingAfter = Math.max(0, before.rating + ratingDelta);
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          coins: { increment: coinsAwarded },
+          xp: normalizedXp,
+          level: levelAfter,
+          rating: ratingAfter,
+        },
+      });
+
+      await tx.battle.update({
+        where: { id: battleId },
+        data: {
+          mode: BattleMode.AI,
+          playerATeamId: playerTeamId,
+          resultForA: result,
+          playerARatingBefore: before.rating,
+          playerARatingAfter: ratingAfter,
+          coinsAwardedA: coinsAwarded,
+          battleLogJson: state as Prisma.JsonObject,
+          finishedAt: new Date(),
+        },
+      });
+
+      await tx.currencyTransaction.create({
+        data: {
+          userId,
+          currencyType: CurrencyType.COINS,
+          amount: coinsAwarded,
+          transactionType: TransactionType.BATTLE_REWARD,
+          referenceId: battleId,
+          metadata: {
+            mode: 'LIVE',
+            result,
+          },
+        },
+      });
+    });
   }
 
   private randomFloat(min: number, max: number): number {
