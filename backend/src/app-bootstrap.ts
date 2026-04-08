@@ -18,9 +18,31 @@ export async function createConfiguredApp() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const corsOrigins = parseCorsOrigins(configService.get<string>('CORS_ORIGINS'));
+  const allowVercelPreviews =
+    (configService.get<string>('CORS_ALLOW_VERCEL_PREVIEWS') ?? '').toLowerCase() === 'true';
 
   app.enableCors({
-    origin: corsOrigins.includes('*') ? true : corsOrigins,
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      if (corsOrigins.includes('*') || corsOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      if (allowVercelPreviews && /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`CORS blocked for origin: ${origin}`), false);
+    },
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     credentials: true,
   });
@@ -35,4 +57,3 @@ export async function createConfiguredApp() {
 
   return app;
 }
-
