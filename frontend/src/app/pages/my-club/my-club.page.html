@@ -1,0 +1,39 @@
+<section class="space-y-6">
+  <div class="panel-pokedex arena-shell p-8">
+    <p class="text-xs font-bold uppercase tracking-[0.14em] text-red-700">My Club</p>
+    <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900">Your Pokemon Collection</h1>
+    <p class="mt-2 text-sm text-slate-600">
+      Inspect your squad depth, rarity spread, and core power profile.
+    </p>
+  </div>
+
+  <article class="panel-pokedex p-6">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h2 class="text-xl font-bold text-slate-900">Collection Cards</h2>
+        <p class="mt-1 text-sm text-slate-600">All creatures you own, styled as TCG cards.</p>
+      </div>
+      <button type="button" class="btn-poke-soft px-3 py-2 text-xs" (click)="loadCreatures()">
+        Refresh
+      </button>
+    </div>
+
+    @if (creaturesError()) {
+      <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        {{ creaturesError() }}
+      </div>
+    }
+
+    @if (loadingCreatures()) {
+      <p class="mt-4 text-sm text-slate-500">Loading creatures...</p>
+    } @else if (creatures().length === 0) {
+      <p class="mt-4 text-sm text-slate-500">No creatures yet. Open packs to start your club.</p>
+    } @else {
+      <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        @for (creature of creatures(); track creature.id) {
+          <app-pokemon-card [creature]="creature" />
+        }
+      </div>
+    }
+  </article>
+</section>

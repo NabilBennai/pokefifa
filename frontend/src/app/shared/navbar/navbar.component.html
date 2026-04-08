@@ -1,0 +1,209 @@
+<nav class="sticky top-0 z-50 border-b border-red-100/70 bg-white/80 backdrop-blur-xl">
+  <div class="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+    <a
+      routerLink="/"
+      class="inline-flex items-center gap-3 text-lg font-extrabold tracking-tight text-slate-900"
+    >
+      <span
+        class="relative inline-flex size-10 items-center justify-center overflow-hidden rounded-full border-2 border-slate-900 bg-white"
+      >
+        <span class="absolute inset-x-0 top-0 h-1/2 bg-brand-500"></span>
+        <span class="absolute inset-x-0 bottom-0 h-1/2 bg-white"></span>
+        <span
+          class="z-10 inline-flex size-4 rounded-full border-2 border-slate-900 bg-white"
+        ></span>
+      </span>
+      Pokefifa
+    </a>
+
+    <button
+      type="button"
+      class="inline-flex items-center rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 md:hidden"
+      (click)="toggleMenu()"
+      [attr.aria-expanded]="menuOpen()"
+      aria-label="Toggle navigation"
+    >
+      Menu
+    </button>
+
+    <div class="hidden items-center gap-2 md:flex">
+      <a
+        routerLink="/"
+        routerLinkActive="bg-red-100 text-red-800"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+      >
+        Home
+      </a>
+
+      @if (isAuthenticated()) {
+        <a
+          routerLink="/dashboard"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+        >
+          Dashboard
+        </a>
+        <a
+          routerLink="/my-club"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+        >
+          My Club
+        </a>
+        <a
+          routerLink="/packs"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+        >
+          Packs
+        </a>
+        <a
+          routerLink="/store"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+        >
+          Store
+        </a>
+        <a
+          routerLink="/squad"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+        >
+          Squad
+        </a>
+        <a
+          routerLink="/battles"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+        >
+          Battles
+        </a>
+        <a
+          routerLink="/ranked"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+        >
+          Ranked
+        </a>
+        <a
+          routerLink="/inventory"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+        >
+          Inventory
+        </a>
+        <span
+          class="mx-1 inline-flex items-center gap-2 rounded-full bg-yellow-50 px-3 py-1 text-xs font-semibold text-slate-700"
+        >
+          <span class="pokeball-dot"></span>
+          {{ user()?.username }}
+        </span>
+        <button type="button" class="btn-poke" (click)="logout()">Logout</button>
+      } @else {
+        <a
+          routerLink="/login"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+        >
+          Login
+        </a>
+        <a routerLink="/register" class="btn-poke">Register</a>
+      }
+    </div>
+  </div>
+
+  @if (menuOpen()) {
+    <div class="border-t border-red-100 bg-white/90 px-4 py-4 md:hidden">
+      <div class="flex flex-col gap-2">
+        <a
+          routerLink="/"
+          [routerLinkActiveOptions]="{ exact: true }"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+          (click)="closeMenu()"
+        >
+          Home
+        </a>
+        @if (isAuthenticated()) {
+          <a
+            routerLink="/dashboard"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+          >
+            Dashboard
+          </a>
+          <a
+            routerLink="/my-club"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+          >
+            My Club
+          </a>
+          <a
+            routerLink="/packs"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+          >
+            Packs
+          </a>
+          <a
+            routerLink="/store"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+          >
+            Store
+          </a>
+          <a
+            routerLink="/squad"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+          >
+            Squad
+          </a>
+          <a
+            routerLink="/battles"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+          >
+            Battles
+          </a>
+          <a
+            routerLink="/ranked"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+          >
+            Ranked
+          </a>
+          <a
+            routerLink="/inventory"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+          >
+            Inventory
+          </a>
+          <span class="px-3 py-1 text-sm text-slate-600">{{ user()?.username }}</span>
+          <button type="button" class="btn-poke w-full" (click)="logout()">Logout</button>
+        } @else {
+          <a
+            routerLink="/login"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+          >
+            Login
+          </a>
+          <a routerLink="/register" class="btn-poke w-full" (click)="closeMenu()">Register</a>
+        }
+      </div>
+    </div>
+  }
+</nav>

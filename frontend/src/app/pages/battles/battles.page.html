@@ -1,0 +1,122 @@
+<section class="space-y-6">
+  <div class="panel-pokedex arena-shell p-8">
+    <p class="text-xs font-bold uppercase tracking-[0.14em] text-red-700">Battles</p>
+    <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900">AI Arena</h1>
+    <p class="mt-2 text-sm text-slate-600">Use your squad to earn coins and climb rating.</p>
+  </div>
+
+  @if (error()) {
+    <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      {{ error() }}
+    </div>
+  }
+
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <article class="stat-tile">
+      <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Rating</p>
+      <p class="mt-1 text-2xl font-black text-slate-900">{{ user()?.rating ?? 0 }}</p>
+    </article>
+    <article class="stat-tile">
+      <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Level</p>
+      <p class="mt-1 text-2xl font-black text-slate-900">{{ user()?.level ?? 0 }}</p>
+    </article>
+    <article class="stat-tile">
+      <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Coins</p>
+      <p class="mt-1 text-2xl font-black text-slate-900">{{ user()?.coins ?? 0 }}</p>
+    </article>
+    <article class="stat-tile">
+      <p class="text-xs font-bold uppercase tracking-wide text-slate-500">XP</p>
+      <p class="mt-1 text-2xl font-black text-slate-900">{{ user()?.xp ?? 0 }}</p>
+    </article>
+  </div>
+
+  <article class="panel-pokedex p-6">
+    <div class="flex flex-wrap items-end gap-3">
+      <div class="min-w-56">
+        <label class="text-xs font-bold uppercase tracking-wide text-slate-500">Team</label>
+        <select
+          class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+          [value]="selectedTeamId() ?? ''"
+          (change)="selectedTeamId.set($any($event.target).value)"
+        >
+          @for (team of teams(); track team.id) {
+            <option [value]="team.id">{{ teamLabel(team) }}</option>
+          }
+        </select>
+      </div>
+      <button
+        type="button"
+        class="btn-poke px-4 py-2"
+        [disabled]="fighting()"
+        (click)="runAiBattle()"
+      >
+        @if (fighting()) {
+          Battling...
+        } @else {
+          Start AI Battle
+        }
+      </button>
+      <button type="button" class="btn-poke-soft px-4 py-2" (click)="loadData()">Refresh</button>
+    </div>
+
+    @if (lastResult()) {
+      <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+        <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">Last Result</p>
+        <p class="mt-2 text-lg font-black text-slate-900">{{ lastResult()!.result }}</p>
+        <p class="mt-1 text-sm text-slate-700">
+          +{{ lastResult()!.rewards.coins }} coins � +{{ lastResult()!.rewards.xp }} xp �
+          @if (lastResult()!.ratingDelta >= 0) {
+            +{{ lastResult()!.ratingDelta }}
+          } @else {
+            {{ lastResult()!.ratingDelta }}
+          }
+          rating
+        </p>
+        <button
+          type="button"
+          class="btn-poke-soft mt-3 px-3 py-2 text-xs"
+          (click)="replayOpen.set(true)"
+        >
+          Replay Battle
+        </button>
+      </div>
+    }
+  </article>
+
+  <article class="panel-pokedex p-6">
+    <h2 class="text-xl font-bold text-slate-900">Recent Battles</h2>
+
+    @if (loading()) {
+      <p class="mt-4 text-sm text-slate-500">Loading battle history...</p>
+    } @else if (history().length === 0) {
+      <p class="mt-4 text-sm text-slate-500">No battles yet.</p>
+    } @else {
+      <ul class="mt-4 space-y-3">
+        @for (battle of history(); track battle.id) {
+          <li class="rounded-2xl border border-white/70 bg-white/80 p-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <p class="text-sm font-bold text-slate-900">
+                {{ battle.mode }} � {{ battle.playerATeam.name }}
+              </p>
+              <span class="pack-pill">{{ battle.resultForA || 'N/A' }}</span>
+            </div>
+            <p class="mt-1 text-xs text-slate-500">{{ battle.createdAt | date: 'short' }}</p>
+            <p class="mt-2 text-sm text-slate-700">
+              Coins +{{ battle.coinsAwardedA }}
+              @if (battle.playerARatingBefore !== null && battle.playerARatingAfter !== null) {
+                � Rating {{ battle.playerARatingBefore }} ? {{ battle.playerARatingAfter }}
+              }
+            </p>
+          </li>
+        }
+      </ul>
+    }
+  </article>
+</section>
+
+<app-battle-replay-modal
+  [open]="replayOpen()"
+  [battle]="lastResult()"
+  title="AI Battle Replay"
+  (closed)="closeReplay()"
+/>

@@ -1,0 +1,144 @@
+<section class="space-y-6">
+  <div class="panel-pokedex arena-shell p-8">
+    <p class="text-xs font-bold uppercase tracking-[0.14em] text-red-700">Ranked</p>
+    <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900">Divisions and Seasons</h1>
+    <p class="mt-2 text-sm text-slate-600">
+      Push your rating, secure your division, and claim end-of-season rewards.
+    </p>
+  </div>
+
+  @if (error()) {
+    <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      {{ error() }}
+    </div>
+  }
+  @if (success()) {
+    <div
+      class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
+    >
+      {{ success() }}
+    </div>
+  }
+
+  @if (overview(); as data) {
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <article class="stat-tile">
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Rating</p>
+        <p class="mt-1 text-2xl font-black text-slate-900">{{ data.ladder.rating }}</p>
+      </article>
+      <article class="stat-tile">
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Division</p>
+        <p class="mt-1 text-2xl font-black text-slate-900">{{ data.ladder.division.label }}</p>
+      </article>
+      <article class="stat-tile">
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Season</p>
+        <p class="mt-1 text-xl font-black text-slate-900">{{ data.season.id }}</p>
+        <p class="mt-1 text-xs text-slate-500">Ends {{ data.season.endsAt | date: 'short' }}</p>
+      </article>
+      <article class="stat-tile">
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Next Division</p>
+        <p class="mt-1 text-xl font-black text-slate-900">
+          {{ data.ladder.nextDivision?.label || 'Top Tier' }}
+        </p>
+      </article>
+    </div>
+
+    <article class="panel-pokedex p-6">
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="min-w-56">
+          <label class="text-xs font-bold uppercase tracking-wide text-slate-500">Team</label>
+          <select
+            class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+            [value]="selectedTeamId() ?? ''"
+            (change)="selectedTeamId.set($any($event.target).value)"
+          >
+            @for (team of teams(); track team.id) {
+              <option [value]="team.id">{{ teamLabel(team) }}</option>
+            }
+          </select>
+        </div>
+        <button
+          type="button"
+          class="btn-poke px-4 py-2"
+          [disabled]="battling()"
+          (click)="playRanked()"
+        >
+          @if (battling()) {
+            Queueing...
+          } @else {
+            Play Ranked
+          }
+        </button>
+        <button type="button" class="btn-poke-soft px-4 py-2" (click)="loadData()">Refresh</button>
+      </div>
+
+      @if (lastBattle()) {
+        <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+          <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">
+            Last Ranked Result
+          </p>
+          <p class="mt-2 text-lg font-black text-slate-900">{{ lastBattle()!.result }}</p>
+          <p class="mt-1 text-sm text-slate-700">
+            +{{ lastBattle()!.rewards.coins }} coins � +{{ lastBattle()!.rewards.xp }} xp �
+            @if (lastBattle()!.ratingDelta >= 0) {
+              +{{ lastBattle()!.ratingDelta }}
+            } @else {
+              {{ lastBattle()!.ratingDelta }}
+            }
+            rating
+          </p>
+          <button
+            type="button"
+            class="btn-poke-soft mt-3 px-3 py-2 text-xs"
+            (click)="replayOpen.set(true)"
+          >
+            Replay Ranked Battle
+          </button>
+        </div>
+      }
+    </article>
+
+    <article class="panel-pokedex p-6">
+      <h2 class="text-xl font-bold text-slate-900">Season Rewards</h2>
+      <p class="mt-2 text-sm text-slate-600">
+        Preview for {{ data.ladder.division.label }}: {{ data.reward.preview.coins }} coins,
+        {{ data.reward.preview.gems }} gems, {{ data.reward.preview.shards }} shards,
+        {{ data.reward.preview.packs }} packs.
+      </p>
+
+      <div class="mt-4">
+        <button
+          type="button"
+          class="btn-poke px-4 py-2 disabled:cursor-not-allowed disabled:opacity-60"
+          [disabled]="!data.reward.canClaim || claiming()"
+          (click)="claimSeasonReward()"
+        >
+          @if (claiming()) {
+            Claiming...
+          } @else {
+            Claim Season Reward
+          }
+        </button>
+        @if (data.reward.alreadyClaimed) {
+          <p class="mt-2 text-xs font-semibold text-emerald-700">
+            Reward already claimed for this season.
+          </p>
+        }
+        @if (!data.season.hasEnded) {
+          <p class="mt-2 text-xs font-semibold text-slate-600">
+            Season still active, reward claim opens at season end.
+          </p>
+        }
+      </div>
+    </article>
+  } @else if (loading()) {
+    <p class="text-sm text-slate-500">Loading ranked overview...</p>
+  }
+</section>
+
+<app-battle-replay-modal
+  [open]="replayOpen()"
+  [battle]="lastBattle()"
+  title="Ranked Battle Replay"
+  (closed)="closeReplay()"
+/>

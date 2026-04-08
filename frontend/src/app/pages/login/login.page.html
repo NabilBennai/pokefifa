@@ -1,0 +1,69 @@
+<section class="mx-auto w-full max-w-md">
+  <div class="panel-pokedex p-7 sm:p-8">
+    <div class="flex items-center gap-2">
+      <span class="pokeball-dot"></span>
+      <p class="text-xs font-bold uppercase tracking-[0.14em] text-red-700">Trainer Access</p>
+    </div>
+    <h1 class="mt-2 text-2xl font-black tracking-tight text-slate-900">Welcome Back</h1>
+    <p class="mt-2 text-sm text-slate-600">
+      Sign in to manage packs, creatures, and your ranked climb.
+    </p>
+
+    <form class="mt-6 space-y-4" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div>
+        <label for="email" class="mb-1 block text-sm font-semibold text-slate-700">Email</label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          autocomplete="email"
+          class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100"
+          placeholder="trainer@pokefifa.gg"
+        />
+        @if (form.controls.email.touched && form.controls.email.invalid) {
+          <p class="mt-1 text-xs text-red-600">Please enter a valid email address.</p>
+        }
+      </div>
+
+      <div>
+        <label for="password" class="mb-1 block text-sm font-semibold text-slate-700"
+          >Password</label
+        >
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          autocomplete="current-password"
+          class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100"
+          placeholder="Your secure password"
+        />
+        @if (form.controls.password.touched && form.controls.password.invalid) {
+          <p class="mt-1 text-xs text-red-600">Password must be at least 8 characters.</p>
+        }
+      </div>
+
+      @if (submitError()) {
+        <div class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {{ submitError() }}
+        </div>
+      }
+
+      <button
+        type="submit"
+        [disabled]="submitting()"
+        class="btn-poke w-full disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        @if (submitting()) {
+          Signing in...
+        } @else {
+          Sign In
+        }
+      </button>
+    </form>
+
+    <p class="mt-5 text-sm text-slate-600">
+      New here?
+      <a routerLink="/register" class="font-bold text-red-700 hover:text-red-800">Create account</a>
+    </p>
+  </div>
+</section>
