@@ -1,10 +1,9 @@
-import { TeamStatus } from '@prisma/client';
 import {
   ArrayMaxSize,
   ArrayUnique,
   IsArray,
   IsBoolean,
-  IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   Length,
@@ -21,8 +20,8 @@ export class UpdateTeamDto {
   isDefault?: boolean;
 
   @IsOptional()
-  @IsEnum(TeamStatus)
-  status?: TeamStatus;
+  @IsIn(['ACTIVE', 'ARCHIVED'])
+  status?: 'ACTIVE' | 'ARCHIVED';
 
   @IsOptional()
   @IsArray()
