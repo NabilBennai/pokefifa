@@ -79,6 +79,12 @@ export class BattlesController {
     if (!user) {
       return null;
     }
-    return this.battlesService.playLiveBattleTurn(user.userId, id, dto.moveIndex);
+    return this.battlesService.playLiveBattleTurn(
+      user.userId,
+      id,
+      dto.action,
+      dto.moveIndex,
+      dto.switchIndex,
+    );
   }
 }

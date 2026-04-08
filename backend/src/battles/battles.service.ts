@@ -40,6 +40,7 @@ type SimulationResult = {
 type LiveBattleState = {
   status: 'IN_PROGRESS' | 'FINISHED';
   queue: 'AI' | 'RANKED';
+  mustPlayerSwitch: boolean;
   turn: number;
   log: string[];
   playerTeamName: string;
@@ -506,6 +507,7 @@ export class BattlesService {
     const state: LiveBattleState = {
       status: 'IN_PROGRESS',
       queue,
+      mustPlayerSwitch: false,
       turn: 1,
       log: [
         `Go! ${playerTeam.combatants[0]?.name ?? 'Unknown'}!`,
@@ -552,7 +554,13 @@ export class BattlesService {
     return this.toLiveBattleResponse(battle.id, state);
   }
 
-  async playLiveBattleTurn(userId: string, battleId: string, moveIndex: number) {
+  async playLiveBattleTurn(
+    userId: string,
+    battleId: string,
+    action: 'MOVE' | 'SWITCH',
+    moveIndex?: number,
+    switchIndex?: number,
+  ) {
     const battle = await this.prisma.battle.findFirst({
       where: {
         id: battleId,
@@ -577,56 +585,110 @@ export class BattlesService {
     const playerActive = state.playerTeam[state.activePlayerIndex];
     const opponentActive = state.opponentTeam[state.activeOpponentIndex];
 
-    if (!playerActive || playerActive.currentHp <= 0) {
-      throw new BadRequestException('No active player creature available.');
-    }
     if (!opponentActive || opponentActive.currentHp <= 0) {
       throw new BadRequestException('No active opponent creature available.');
     }
 
-    if (moveIndex < 0 || moveIndex >= playerActive.moves.length) {
-      throw new BadRequestException('Invalid move index.');
+    if (state.mustPlayerSwitch && action !== 'SWITCH') {
+      throw new BadRequestException('You must switch Pokémon before attacking.');
     }
 
-    const playerMove = playerActive.moves[moveIndex];
-    const aiMove = this.pickMove(opponentActive.moves);
-    const firstIsPlayer =
-      playerActive.speed > opponentActive.speed ||
-      (playerActive.speed === opponentActive.speed && Math.random() < 0.5);
-
-    state.log.push(`Turn ${state.turn}:`);
-    const order = firstIsPlayer
-      ? [
-          { actor: playerActive, target: opponentActive, move: playerMove, side: 'A' as const },
-          { actor: opponentActive, target: playerActive, move: aiMove, side: 'B' as const },
-        ]
-      : [
-          { actor: opponentActive, target: playerActive, move: aiMove, side: 'B' as const },
-          { actor: playerActive, target: opponentActive, move: playerMove, side: 'A' as const },
-        ];
-
-    for (const step of order) {
-      if (step.actor.currentHp <= 0 || step.target.currentHp <= 0) {
-        continue;
+    if (action === 'SWITCH') {
+      if (switchIndex === undefined || switchIndex === null) {
+        throw new BadRequestException('switchIndex is required for switch action.');
       }
-      const outcome = this.executeAttack(step.actor, step.target, step.move);
-      state.log.push(`${step.actor.name} used ${step.move.name}. ${outcome}`);
+      if (switchIndex < 0 || switchIndex >= state.playerTeam.length) {
+        throw new BadRequestException('Invalid switch index.');
+      }
 
-      if (step.target.currentHp <= 0) {
-        state.log.push(`${step.target.name} fainted.`);
-        if (step.side === 'A') {
-          const nextOpponent = this.firstLivingIndex(state.opponentTeam);
-          state.activeOpponentIndex = nextOpponent;
-          if (nextOpponent >= 0) {
-            state.log.push(`Foe sent out ${state.opponentTeam[nextOpponent].name}!`);
-          }
-        } else {
-          const nextPlayer = this.firstLivingIndex(state.playerTeam);
-          state.activePlayerIndex = nextPlayer;
-          if (nextPlayer >= 0) {
-            state.log.push(`Go! ${state.playerTeam[nextPlayer].name}!`);
+      const incoming = state.playerTeam[switchIndex];
+      if (!incoming || incoming.currentHp <= 0) {
+        throw new BadRequestException('Selected Pokémon cannot battle.');
+      }
+      if (!state.mustPlayerSwitch && switchIndex === state.activePlayerIndex) {
+        throw new BadRequestException('Selected Pokémon is already active.');
+      }
+
+      if (state.mustPlayerSwitch) {
+        state.activePlayerIndex = switchIndex;
+        state.mustPlayerSwitch = false;
+        state.log.push(`Go! ${incoming.name}!`);
+      } else {
+        state.log.push(`Turn ${state.turn}:`);
+        state.activePlayerIndex = switchIndex;
+        state.log.push(`Come back! Go! ${incoming.name}!`);
+
+        const aiMove = this.pickMove(opponentActive.moves);
+        const outcome = this.executeAttack(opponentActive, incoming, aiMove);
+        state.log.push(`${opponentActive.name} used ${aiMove.name}. ${outcome}`);
+
+        if (incoming.currentHp <= 0) {
+          state.log.push(`${incoming.name} fainted.`);
+          state.mustPlayerSwitch = this.firstLivingIndex(state.playerTeam) >= 0;
+          if (state.mustPlayerSwitch) {
+            state.log.push('Choose your next Pokémon.');
           }
         }
+
+        if (!state.mustPlayerSwitch) {
+          state.turn += 1;
+        }
+      }
+    } else {
+      if (!playerActive || playerActive.currentHp <= 0) {
+        throw new BadRequestException('No active player creature available.');
+      }
+      if (moveIndex === undefined || moveIndex === null) {
+        throw new BadRequestException('moveIndex is required for move action.');
+      }
+      if (moveIndex < 0 || moveIndex >= playerActive.moves.length) {
+        throw new BadRequestException('Invalid move index.');
+      }
+
+      const playerMove = playerActive.moves[moveIndex];
+      const aiMove = this.pickMove(opponentActive.moves);
+      const firstIsPlayer =
+        playerActive.speed > opponentActive.speed ||
+        (playerActive.speed === opponentActive.speed && Math.random() < 0.5);
+
+      state.log.push(`Turn ${state.turn}:`);
+      const order = firstIsPlayer
+        ? [
+            { actor: playerActive, target: opponentActive, move: playerMove, side: 'A' as const },
+            { actor: opponentActive, target: playerActive, move: aiMove, side: 'B' as const },
+          ]
+        : [
+            { actor: opponentActive, target: playerActive, move: aiMove, side: 'B' as const },
+            { actor: playerActive, target: opponentActive, move: playerMove, side: 'A' as const },
+          ];
+
+      for (const step of order) {
+        if (step.actor.currentHp <= 0 || step.target.currentHp <= 0) {
+          continue;
+        }
+        const outcome = this.executeAttack(step.actor, step.target, step.move);
+        state.log.push(`${step.actor.name} used ${step.move.name}. ${outcome}`);
+
+        if (step.target.currentHp <= 0) {
+          state.log.push(`${step.target.name} fainted.`);
+          if (step.side === 'A') {
+            const nextOpponent = this.firstLivingIndex(state.opponentTeam);
+            state.activeOpponentIndex = nextOpponent;
+            if (nextOpponent >= 0) {
+              state.log.push(`Foe sent out ${state.opponentTeam[nextOpponent].name}!`);
+            }
+          } else {
+            const nextPlayer = this.firstLivingIndex(state.playerTeam);
+            state.mustPlayerSwitch = nextPlayer >= 0;
+            if (state.mustPlayerSwitch) {
+              state.log.push('Choose your next Pokémon.');
+            }
+          }
+        }
+      }
+
+      if (!state.mustPlayerSwitch) {
+        state.turn += 1;
       }
     }
 
@@ -641,7 +703,6 @@ export class BattlesService {
       return this.toLiveBattleResponse(battle.id, state);
     }
 
-    state.turn += 1;
     if (state.log.length > 220) {
       state.log = state.log.slice(state.log.length - 220);
     }
@@ -1048,6 +1109,9 @@ export class BattlesService {
     if (!state.queue) {
       state.queue = 'AI';
     }
+    if (state.mustPlayerSwitch === undefined) {
+      state.mustPlayerSwitch = false;
+    }
     return state;
   }
 
@@ -1055,7 +1119,7 @@ export class BattlesService {
     if (
       state.activePlayerIndex < 0 ||
       !state.playerTeam[state.activePlayerIndex] ||
-      state.playerTeam[state.activePlayerIndex].currentHp <= 0
+      (!state.mustPlayerSwitch && state.playerTeam[state.activePlayerIndex].currentHp <= 0)
     ) {
       state.activePlayerIndex = this.firstLivingIndex(state.playerTeam);
     }
@@ -1084,6 +1148,7 @@ export class BattlesService {
       status: state.status,
       turn: state.turn,
       finished: state.status === 'FINISHED',
+      mustPlayerSwitch: state.mustPlayerSwitch,
       winnerSide: state.winner,
       result: state.result ?? null,
       rewards: state.rewards ?? null,
@@ -1102,6 +1167,18 @@ export class BattlesService {
             teamRemaining: playerRemaining,
           }
         : null,
+      playerRoster: state.playerTeam.map((combatant, index) => ({
+        index,
+        name: combatant.name,
+        slug: combatant.slug,
+        hp: combatant.currentHp,
+        maxHp: combatant.maxHp,
+        isActive: index === state.activePlayerIndex,
+        isFainted: combatant.currentHp <= 0,
+        canSwitch:
+          combatant.currentHp > 0 &&
+          (!state.mustPlayerSwitch ? index !== state.activePlayerIndex : true),
+      })),
       opponent: opponent
         ? {
             name: opponent.name,

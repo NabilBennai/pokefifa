@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { LiveBattleState } from '../../../core/models/battle.models';
 
 @Component({
@@ -7,12 +7,23 @@ import { LiveBattleState } from '../../../core/models/battle.models';
   imports: [CommonModule],
   templateUrl: './battle-live-modal.component.html',
 })
-export class BattleLiveModalComponent {
+export class BattleLiveModalComponent implements OnChanges {
   @Input() open = false;
   @Input() battle: LiveBattleState | null = null;
   @Input() pending = false;
   @Output() closed = new EventEmitter<void>();
   @Output() moveSelected = new EventEmitter<number>();
+  @Output() switchSelected = new EventEmitter<number>();
+  protected showSwitchPicker = false;
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['open'] && !this.open) {
+      this.showSwitchPicker = false;
+    }
+    if (changes['battle'] && this.battle?.mustPlayerSwitch) {
+      this.showSwitchPicker = true;
+    }
+  }
 
   protected hpClass(percent: number): string {
     if (percent > 60) {
@@ -33,6 +44,25 @@ export class BattleLiveModalComponent {
       return;
     }
     this.moveSelected.emit(index);
+  }
+
+  protected chooseSwitch(index: number): void {
+    if (this.pending) {
+      return;
+    }
+    this.switchSelected.emit(index);
+    this.showSwitchPicker = false;
+  }
+
+  protected openSwitchPicker(): void {
+    if (this.pending) {
+      return;
+    }
+    this.showSwitchPicker = true;
+  }
+
+  protected closeSwitchPicker(): void {
+    this.showSwitchPicker = false;
   }
 
   protected close(): void {

@@ -59,6 +59,7 @@ export type LiveBattleState = {
   status: 'IN_PROGRESS' | 'FINISHED';
   turn: number;
   finished: boolean;
+  mustPlayerSwitch: boolean;
   winnerSide: 'A' | 'B' | 'DRAW' | null;
   result: 'WIN' | 'LOSS' | 'DRAW' | null;
   rewards: {
@@ -80,6 +81,16 @@ export type LiveBattleState = {
     }>;
     teamRemaining: number;
   } | null;
+  playerRoster: Array<{
+    index: number;
+    name: string;
+    slug: string;
+    hp: number;
+    maxHp: number;
+    isActive: boolean;
+    isFainted: boolean;
+    canSwitch: boolean;
+  }>;
   opponent: {
     name: string;
     slug: string;

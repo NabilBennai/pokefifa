@@ -119,6 +119,34 @@ export class BattlesPageComponent {
       });
   }
 
+  protected playSwitch(switchIndex: number): void {
+    const battle = this.liveBattle();
+    if (!battle || battle.finished) {
+      return;
+    }
+
+    this.actionPending.set(true);
+    this.battlesService
+      .switchLivePokemon(battle.battleId, switchIndex)
+      .pipe(finalize(() => this.actionPending.set(false)))
+      .subscribe({
+        next: (state) => {
+          this.liveBattle.set(state);
+          if (state.finished) {
+            this.authService.refreshProfile().subscribe();
+            this.loadData();
+            setTimeout(() => {
+              this.liveOpen.set(false);
+              this.liveBattle.set(null);
+            }, 1000);
+          }
+        },
+        error: (error: HttpErrorResponse) => {
+          this.error.set(error.error?.message ?? 'Switch failed.');
+        },
+      });
+  }
+
   protected teamLabel(team: Team): string {
     return team.isDefault ? `${team.name} (Default)` : team.name;
   }

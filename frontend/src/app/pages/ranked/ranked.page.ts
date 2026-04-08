@@ -130,6 +130,43 @@ export class RankedPageComponent {
       });
   }
 
+  protected playSwitch(switchIndex: number): void {
+    const battle = this.liveBattle();
+    if (!battle || battle.finished) {
+      return;
+    }
+
+    this.actionPending.set(true);
+    this.battlesService
+      .switchLivePokemon(battle.battleId, switchIndex)
+      .pipe(finalize(() => this.actionPending.set(false)))
+      .subscribe({
+        next: (state) => {
+          this.liveBattle.set(state);
+          if (state.finished) {
+            const result =
+              state.result ??
+              (state.winnerSide === 'A' ? 'WIN' : state.winnerSide === 'B' ? 'LOSS' : 'DRAW');
+            const coins = state.rewards?.coins ?? 0;
+            const xp = state.rewards?.xp ?? 0;
+            const delta = state.ratingDelta ?? 0;
+            this.success.set(
+              `Ranked match finished: ${result}. +${coins} coins, +${xp} xp, ${delta >= 0 ? '+' : ''}${delta} rating.`,
+            );
+            this.authService.refreshProfile().subscribe();
+            this.loadData();
+            setTimeout(() => {
+              this.liveOpen.set(false);
+              this.liveBattle.set(null);
+            }, 1000);
+          }
+        },
+        error: (error: HttpErrorResponse) => {
+          this.error.set(error.error?.message ?? 'Switch failed.');
+        },
+      });
+  }
+
   protected claimSeasonReward(): void {
     this.error.set(null);
     this.success.set(null);

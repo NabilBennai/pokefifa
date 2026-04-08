@@ -46,8 +46,25 @@ export class BattlesService {
   }
 
   playLiveTurn(battleId: string, moveIndex: number): Observable<LiveBattleState> {
-    return this.http.post<LiveBattleState>(`${this.apiBaseUrl}/battles/live/${battleId}/action`, {
+    return this.playLiveAction(battleId, {
+      action: 'MOVE',
       moveIndex,
+    });
+  }
+
+  switchLivePokemon(battleId: string, switchIndex: number): Observable<LiveBattleState> {
+    return this.playLiveAction(battleId, {
+      action: 'SWITCH',
+      switchIndex,
+    });
+  }
+
+  private playLiveAction(
+    battleId: string,
+    payload: { action: 'MOVE'; moveIndex: number } | { action: 'SWITCH'; switchIndex: number },
+  ): Observable<LiveBattleState> {
+    return this.http.post<LiveBattleState>(`${this.apiBaseUrl}/battles/live/${battleId}/action`, {
+      ...payload,
     });
   }
 }
