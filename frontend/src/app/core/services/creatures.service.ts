@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { MyCreaturesResponse } from '../models/creature.models';
+import { MyCreaturesResponse, UpdateCreatureMovesResponse } from '../models/creature.models';
 import { API_BASE_URL } from '../tokens/api-base-url.token';
 
 @Injectable({ providedIn: 'root' })
@@ -11,5 +11,15 @@ export class CreaturesService {
 
   getMyCreatures(): Observable<MyCreaturesResponse> {
     return this.http.get<MyCreaturesResponse>(`${this.apiBaseUrl}/creatures/my`);
+  }
+
+  updateCreatureMoves(
+    creatureId: string,
+    moveIds: string[],
+  ): Observable<UpdateCreatureMovesResponse> {
+    return this.http.patch<UpdateCreatureMovesResponse>(
+      `${this.apiBaseUrl}/creatures/${creatureId}/moves`,
+      { moveIds },
+    );
   }
 }

@@ -31,9 +31,105 @@
     } @else {
       <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         @for (creature of creatures(); track creature.id) {
-          <app-pokemon-card [creature]="creature" />
+          <div class="space-y-2">
+            <app-pokemon-card [creature]="creature" />
+            <button
+              type="button"
+              class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-red-300 hover:text-red-700"
+              (click)="openMoveEditor(creature)"
+            >
+              Manage Moves
+            </button>
+          </div>
         }
       </div>
     }
   </article>
+
+  @if (selectedCreature(); as selected) {
+    <article class="panel-pokedex p-6">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Move Set Editor</h2>
+          <p class="mt-1 text-sm text-slate-600">
+            {{ selected.nickname || selected.species.name }} - choose up to 4 learnable moves.
+          </p>
+        </div>
+        <button type="button" class="btn-poke-soft px-3 py-2 text-xs" (click)="closeMoveEditor()">
+          Close
+        </button>
+      </div>
+
+      <div class="mt-4 grid gap-4 lg:grid-cols-[1fr_auto]">
+        <div class="space-y-3">
+          @for (moveId of editableMoveIds(); track $index) {
+            <div class="rounded-xl border border-slate-200 bg-white p-3">
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Slot {{ $index + 1 }}</p>
+                <button
+                  type="button"
+                  class="text-[11px] font-semibold text-red-700 disabled:opacity-40"
+                  [disabled]="editableMoveIds().length <= 1"
+                  (click)="removeMoveSlot($index)"
+                >
+                  Remove
+                </button>
+              </div>
+              <select
+                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+                [value]="moveId"
+                (change)="updateSlotMove($index, $any($event.target).value)"
+              >
+                @for (move of selected.availableMoves; track move.id) {
+                  <option [value]="move.id">
+                    {{ move.name }} ({{ move.type }} - Pow {{ move.power ?? '--' }} - Acc {{ move.accuracy ?? '--' }})
+                  </option>
+                }
+              </select>
+            </div>
+          }
+
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              class="btn-poke-soft px-3 py-2 text-xs disabled:opacity-40"
+              [disabled]="editableMoveIds().length >= 4"
+              (click)="addMoveSlot()"
+            >
+              Add Slot
+            </button>
+            <button
+              type="button"
+              class="btn-poke px-4 py-2 text-xs disabled:opacity-40"
+              [disabled]="savingMoves()"
+              (click)="saveMoves()"
+            >
+              @if (savingMoves()) { Saving... } @else { Save Move Set }
+            </button>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white p-3">
+          <p class="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Current Set</p>
+          <ul class="mt-2 space-y-1 text-sm text-slate-700">
+            <li>1. {{ currentMoveName(selected, 1) }}</li>
+            <li>2. {{ currentMoveName(selected, 2) }}</li>
+            <li>3. {{ currentMoveName(selected, 3) }}</li>
+            <li>4. {{ currentMoveName(selected, 4) }}</li>
+          </ul>
+        </div>
+      </div>
+
+      @if (moveEditorError()) {
+        <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {{ moveEditorError() }}
+        </div>
+      }
+      @if (moveEditorSuccess()) {
+        <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          {{ moveEditorSuccess() }}
+        </div>
+      }
+    </article>
+  }
 </section>
