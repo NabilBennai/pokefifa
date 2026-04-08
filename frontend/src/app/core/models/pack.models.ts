@@ -8,6 +8,33 @@ export type UserPackListItem = {
   createdAt: string;
 };
 
+export type StorePackItem = {
+  id: string;
+  slug: string;
+  name: string;
+  type: 'BRONZE' | 'SILVER' | 'ELITE' | 'EVENT';
+  coinPrice: number | null;
+  gemPrice: number | null;
+  description: string | null;
+};
+
+export type StorePacksResponse = {
+  total: number;
+  packs: StorePackItem[];
+};
+
+export type PurchasePackResponse = {
+  purchasedPack: {
+    id: string;
+    createdAt: string;
+    packDefinition: StorePackItem;
+  };
+  spent: {
+    currencyType: 'COINS' | 'GEMS' | 'SHARDS';
+    amount: number;
+  };
+};
+
 export type MyPacksResponse = {
   totalUnopened: number;
   packs: UserPackListItem[];

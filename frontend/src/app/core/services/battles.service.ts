@@ -16,13 +16,6 @@ export class BattlesService {
     );
   }
 
-  runRankedBattle(teamId?: string): Observable<AiBattleResponse> {
-    return this.http.post<AiBattleResponse>(
-      `${this.apiBaseUrl}/battles/ranked`,
-      teamId ? { teamId } : {},
-    );
-  }
-
   getMyHistory(): Observable<BattleHistoryResponse> {
     return this.http.get<BattleHistoryResponse>(`${this.apiBaseUrl}/battles/history/me`);
   }

@@ -4,11 +4,14 @@
 Auth
 POST /auth/register
 POST /auth/login
-GET /users/me
+GET /auth/me
 
 Species
 GET /species
-GET /species/:id
+GET /species/:id (supports id or slug)
+
+Creatures
+GET /creatures/my
 
 Teams
 GET /teams
@@ -22,8 +25,10 @@ GET /inventory/items
 
 Packs
 GET /packs/store
+GET /packs/my
+GET /packs/history?limit=10
 POST /packs/purchase/:packDefinitionId
-POST /packs/open/:userPackId
+POST /packs/:id/open
 
 Battles
 POST /battles/ai

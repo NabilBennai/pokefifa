@@ -13,23 +13,8 @@ export type AiBattleResponse = {
   };
   opponent: {
     name: string;
-    power?: number;
-    rating?: number;
+    power: number;
   };
-  participants?: {
-    player: {
-      name: string;
-      slug: string | null;
-    };
-    opponent: {
-      name: string;
-      slug: string | null;
-    };
-  };
-  gameEnded?: boolean;
-  winnerSide?: 'A' | 'B' | 'DRAW';
-  turns?: number;
-  battleLog?: string[];
   createdAt: string;
 };
 
