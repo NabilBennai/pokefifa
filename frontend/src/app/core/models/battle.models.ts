@@ -55,10 +55,17 @@ export type BattleHistoryResponse = {
 export type LiveBattleState = {
   battleId: string;
   mode: 'LIVE';
+  queue: 'AI' | 'RANKED';
   status: 'IN_PROGRESS' | 'FINISHED';
   turn: number;
   finished: boolean;
   winnerSide: 'A' | 'B' | 'DRAW' | null;
+  result: 'WIN' | 'LOSS' | 'DRAW' | null;
+  rewards: {
+    coins: number;
+    xp: number;
+  } | null;
+  ratingDelta: number | null;
   player: {
     name: string;
     slug: string;

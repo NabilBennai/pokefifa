@@ -51,6 +51,17 @@ export class BattlesController {
     return this.battlesService.startLiveBattle(user.userId, dto.teamId);
   }
 
+  @Post('live/ranked/start')
+  async startLiveRankedBattle(
+    @CurrentUser() user: AuthenticatedUser | undefined,
+    @Body() dto: LiveBattleStartDto,
+  ) {
+    if (!user) {
+      return null;
+    }
+    return this.battlesService.startLiveRankedBattle(user.userId, dto.teamId);
+  }
+
   @Get('live/:id')
   async getLiveBattle(@CurrentUser() user: AuthenticatedUser | undefined, @Param('id') id: string) {
     if (!user) {

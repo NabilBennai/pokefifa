@@ -39,6 +39,7 @@ type SimulationResult = {
 
 type LiveBattleState = {
   status: 'IN_PROGRESS' | 'FINISHED';
+  queue: 'AI' | 'RANKED';
   turn: number;
   log: string[];
   playerTeamName: string;
@@ -48,6 +49,13 @@ type LiveBattleState = {
   activePlayerIndex: number;
   activeOpponentIndex: number;
   winner: 'A' | 'B' | 'DRAW' | null;
+  opponentRating?: number;
+  rewards?: {
+    coins: number;
+    xp: number;
+  };
+  ratingDelta?: number;
+  result?: BattleResult;
 };
 
 const MOVE_SELECT = {
@@ -453,21 +461,51 @@ export class BattlesService {
   }
 
   async startLiveBattle(userId: string, requestedTeamId?: string) {
+    return this.startLiveBattleInternal(userId, requestedTeamId, 'AI');
+  }
+
+  async startLiveRankedBattle(userId: string, requestedTeamId?: string) {
+    return this.startLiveBattleInternal(userId, requestedTeamId, 'RANKED');
+  }
+
+  private async startLiveBattleInternal(
+    userId: string,
+    requestedTeamId: string | undefined,
+    queue: 'AI' | 'RANKED',
+  ) {
     const playerTeamData = await this.resolveTeam(userId, requestedTeamId);
     if (playerTeamData.slots.length === 0) {
       throw new BadRequestException('Selected team has no creatures.');
     }
 
     const playerTeam = this.toCombatTeam(playerTeamData.name, playerTeamData.slots);
-    const averageLevel = this.averageLevel(playerTeam.combatants);
-    const opponentTeam = await this.generateOpponentTeam(
-      playerTeam.combatants.length,
-      averageLevel,
-      'AI Trainer',
-    );
+    let opponentTeam: CombatTeam;
+    let opponentRating: number | undefined;
+
+    if (queue === 'RANKED') {
+      const profile = await this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: { rating: true },
+      });
+      const levelTarget = this.levelFromRating(profile.rating);
+      opponentRating = Math.max(100, profile.rating + Math.round(this.randomFloat(-120, 120)));
+      opponentTeam = await this.generateOpponentTeam(
+        playerTeam.combatants.length,
+        levelTarget,
+        'Ranked Opponent',
+      );
+    } else {
+      const averageLevel = this.averageLevel(playerTeam.combatants);
+      opponentTeam = await this.generateOpponentTeam(
+        playerTeam.combatants.length,
+        averageLevel,
+        'AI Trainer',
+      );
+    }
 
     const state: LiveBattleState = {
       status: 'IN_PROGRESS',
+      queue,
       turn: 1,
       log: [
         `Go! ${playerTeam.combatants[0]?.name ?? 'Unknown'}!`,
@@ -480,11 +518,12 @@ export class BattlesService {
       activePlayerIndex: 0,
       activeOpponentIndex: 0,
       winner: null,
+      opponentRating,
     };
 
     const createdBattle = await this.prisma.battle.create({
       data: {
-        mode: BattleMode.AI,
+        mode: queue === 'RANKED' ? BattleMode.RANKED : BattleMode.AI,
         playerAId: userId,
         playerATeamId: playerTeamData.id,
         battleLogJson: state as Prisma.JsonObject,
@@ -1005,7 +1044,11 @@ export class BattlesService {
     if (!raw || typeof raw !== 'object') {
       throw new BadRequestException('Invalid live battle state.');
     }
-    return raw as unknown as LiveBattleState;
+    const state = raw as unknown as LiveBattleState;
+    if (!state.queue) {
+      state.queue = 'AI';
+    }
+    return state;
   }
 
   private normalizeActiveIndexes(state: LiveBattleState): void {
@@ -1037,10 +1080,14 @@ export class BattlesService {
     return {
       battleId,
       mode: 'LIVE',
+      queue: state.queue,
       status: state.status,
       turn: state.turn,
       finished: state.status === 'FINISHED',
       winnerSide: state.winner,
+      result: state.result ?? null,
+      rewards: state.rewards ?? null,
+      ratingDelta: state.ratingDelta ?? null,
       player: player
         ? {
             name: player.name,
@@ -1080,9 +1127,29 @@ export class BattlesService {
     state: LiveBattleState,
   ): Promise<void> {
     const result = this.winnerToResult(state.winner ?? 'DRAW');
-    const coinsAwarded = result === BattleResult.WIN ? 130 : result === BattleResult.DRAW ? 70 : 40;
-    const xpAwarded = result === BattleResult.WIN ? 90 : result === BattleResult.DRAW ? 55 : 30;
-    const ratingDelta = result === BattleResult.WIN ? 18 : result === BattleResult.DRAW ? 0 : -12;
+    const isRanked = state.queue === 'RANKED';
+    const coinsAwarded = isRanked
+      ? result === BattleResult.WIN
+        ? 180
+        : result === BattleResult.DRAW
+          ? 95
+          : 55
+      : result === BattleResult.WIN
+        ? 130
+        : result === BattleResult.DRAW
+          ? 70
+          : 40;
+    const xpAwarded = isRanked
+      ? result === BattleResult.WIN
+        ? 130
+        : result === BattleResult.DRAW
+          ? 80
+          : 45
+      : result === BattleResult.WIN
+        ? 90
+        : result === BattleResult.DRAW
+          ? 55
+          : 30;
 
     await this.prisma.$transaction(async (tx) => {
       const before = await tx.user.findUniqueOrThrow({
@@ -1090,11 +1157,27 @@ export class BattlesService {
         select: { rating: true, xp: true, level: true },
       });
 
+      const ratingDelta = isRanked
+        ? (() => {
+            const opponentRating = state.opponentRating ?? before.rating;
+            const actual = result === BattleResult.WIN ? 1 : result === BattleResult.DRAW ? 0.5 : 0;
+            const expected = 1 / (1 + 10 ** ((opponentRating - before.rating) / 400));
+            return Math.round(28 * (actual - expected));
+          })()
+        : result === BattleResult.WIN
+          ? 18
+          : result === BattleResult.DRAW
+            ? 0
+            : -12;
+
       const xpAfter = before.xp + xpAwarded;
       const levelGain = Math.floor(xpAfter / 1000);
       const normalizedXp = xpAfter % 1000;
       const levelAfter = before.level + levelGain;
       const ratingAfter = Math.max(0, before.rating + ratingDelta);
+      state.result = result;
+      state.rewards = { coins: coinsAwarded, xp: xpAwarded };
+      state.ratingDelta = ratingDelta;
 
       await tx.user.update({
         where: { id: userId },
@@ -1109,11 +1192,13 @@ export class BattlesService {
       await tx.battle.update({
         where: { id: battleId },
         data: {
-          mode: BattleMode.AI,
+          mode: isRanked ? BattleMode.RANKED : BattleMode.AI,
           playerATeamId: playerTeamId,
           resultForA: result,
           playerARatingBefore: before.rating,
           playerARatingAfter: ratingAfter,
+          playerBRatingBefore: isRanked ? (state.opponentRating ?? null) : null,
+          playerBRatingAfter: isRanked ? (state.opponentRating ?? null) : null,
           coinsAwardedA: coinsAwarded,
           battleLogJson: state as Prisma.JsonObject,
           finishedAt: new Date(),
@@ -1128,8 +1213,9 @@ export class BattlesService {
           transactionType: TransactionType.BATTLE_REWARD,
           referenceId: battleId,
           metadata: {
-            mode: 'LIVE',
+            mode: isRanked ? 'LIVE_RANKED' : 'LIVE',
             result,
+            ratingDelta,
           },
         },
       });

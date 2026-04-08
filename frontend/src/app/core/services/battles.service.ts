@@ -34,6 +34,13 @@ export class BattlesService {
     );
   }
 
+  startLiveRankedBattle(teamId?: string): Observable<LiveBattleState> {
+    return this.http.post<LiveBattleState>(
+      `${this.apiBaseUrl}/battles/live/ranked/start`,
+      teamId ? { teamId } : {},
+    );
+  }
+
   getLiveBattle(battleId: string): Observable<LiveBattleState> {
     return this.http.get<LiveBattleState>(`${this.apiBaseUrl}/battles/live/${battleId}`);
   }

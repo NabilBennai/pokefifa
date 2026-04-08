@@ -2,18 +2,18 @@ import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
-import { AiBattleResponse } from '../../core/models/battle.models';
+import { LiveBattleState } from '../../core/models/battle.models';
 import { RankedOverviewResponse } from '../../core/models/ranked.models';
 import { Team } from '../../core/models/team.models';
 import { AuthService } from '../../core/services/auth.service';
 import { BattlesService } from '../../core/services/battles.service';
 import { RankedService } from '../../core/services/ranked.service';
 import { TeamsService } from '../../core/services/teams.service';
-import { BattleReplayModalComponent } from '../../shared/components/battle-replay-modal/battle-replay-modal.component';
+import { BattleLiveModalComponent } from '../../shared/components/battle-live-modal/battle-live-modal.component';
 
 @Component({
   selector: 'app-ranked-page',
-  imports: [DatePipe, BattleReplayModalComponent],
+  imports: [DatePipe, BattleLiveModalComponent],
   templateUrl: './ranked.page.html',
 })
 export class RankedPageComponent {
@@ -31,8 +31,9 @@ export class RankedPageComponent {
   protected readonly overview = signal<RankedOverviewResponse | null>(null);
   protected readonly teams = signal<Team[]>([]);
   protected readonly selectedTeamId = signal<string | null>(null);
-  protected readonly lastBattle = signal<AiBattleResponse | null>(null);
-  protected readonly replayOpen = signal(false);
+  protected readonly liveBattle = signal<LiveBattleState | null>(null);
+  protected readonly liveOpen = signal(false);
+  protected readonly actionPending = signal(false);
 
   constructor() {
     this.loadData();
@@ -75,22 +76,56 @@ export class RankedPageComponent {
   protected playRanked(): void {
     this.error.set(null);
     this.success.set(null);
-    this.lastBattle.set(null);
+    this.liveBattle.set(null);
     this.battling.set(true);
 
     this.battlesService
-      .runRankedBattle(this.selectedTeamId() ?? undefined)
+      .startLiveRankedBattle(this.selectedTeamId() ?? undefined)
       .pipe(finalize(() => this.battling.set(false)))
       .subscribe({
         next: (response) => {
-          this.lastBattle.set(response);
-          this.replayOpen.set(true);
-          this.success.set(`Ranked match finished: ${response.result}.`);
-          this.authService.refreshProfile().subscribe();
-          this.loadData();
+          this.liveBattle.set(response);
+          this.liveOpen.set(true);
         },
         error: (error: HttpErrorResponse) => {
-          this.error.set(error.error?.message ?? 'Could not run ranked battle.');
+          this.error.set(error.error?.message ?? 'Could not start ranked battle.');
+        },
+      });
+  }
+
+  protected playMove(moveIndex: number): void {
+    const battle = this.liveBattle();
+    if (!battle || battle.finished) {
+      return;
+    }
+
+    this.actionPending.set(true);
+    this.battlesService
+      .playLiveTurn(battle.battleId, moveIndex)
+      .pipe(finalize(() => this.actionPending.set(false)))
+      .subscribe({
+        next: (state) => {
+          this.liveBattle.set(state);
+          if (state.finished) {
+            const result =
+              state.result ??
+              (state.winnerSide === 'A' ? 'WIN' : state.winnerSide === 'B' ? 'LOSS' : 'DRAW');
+            const coins = state.rewards?.coins ?? 0;
+            const xp = state.rewards?.xp ?? 0;
+            const delta = state.ratingDelta ?? 0;
+            this.success.set(
+              `Ranked match finished: ${result}. +${coins} coins, +${xp} xp, ${delta >= 0 ? '+' : ''}${delta} rating.`,
+            );
+            this.authService.refreshProfile().subscribe();
+            this.loadData();
+            setTimeout(() => {
+              this.liveOpen.set(false);
+              this.liveBattle.set(null);
+            }, 1000);
+          }
+        },
+        error: (error: HttpErrorResponse) => {
+          this.error.set(error.error?.message ?? 'Turn failed.');
         },
       });
   }
@@ -121,7 +156,7 @@ export class RankedPageComponent {
     return team.isDefault ? `${team.name} (Default)` : team.name;
   }
 
-  protected closeReplay(): void {
-    this.replayOpen.set(false);
+  protected closeLive(): void {
+    this.liveOpen.set(false);
   }
 }
