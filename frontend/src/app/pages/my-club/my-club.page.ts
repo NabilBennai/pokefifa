@@ -116,7 +116,9 @@ export class MyClubPageComponent {
       return;
     }
 
-    const moveIds = this.editableMoveIds().map((id) => id.trim()).filter((id) => id.length > 0);
+    const moveIds = this.editableMoveIds()
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
     const unique = new Set(moveIds);
     if (moveIds.length === 0 || moveIds.length > 4) {
       this.moveEditorError.set('Select between 1 and 4 moves.');

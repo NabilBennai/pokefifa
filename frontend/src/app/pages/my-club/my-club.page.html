@@ -65,7 +65,9 @@
           @for (moveId of editableMoveIds(); track $index) {
             <div class="rounded-xl border border-slate-200 bg-white p-3">
               <div class="flex items-center justify-between gap-2">
-                <p class="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Slot {{ $index + 1 }}</p>
+                <p class="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+                  Slot {{ $index + 1 }}
+                </p>
                 <button
                   type="button"
                   class="text-[11px] font-semibold text-red-700 disabled:opacity-40"
@@ -82,7 +84,8 @@
               >
                 @for (move of selected.availableMoves; track move.id) {
                   <option [value]="move.id">
-                    {{ move.name }} ({{ move.type }} - Pow {{ move.power ?? '--' }} - Acc {{ move.accuracy ?? '--' }})
+                    {{ move.name }} ({{ move.type }} - Pow {{ move.power ?? '--' }} - Acc
+                    {{ move.accuracy ?? '--' }})
                   </option>
                 }
               </select>
@@ -104,7 +107,11 @@
               [disabled]="savingMoves()"
               (click)="saveMoves()"
             >
-              @if (savingMoves()) { Saving... } @else { Save Move Set }
+              @if (savingMoves()) {
+                Saving...
+              } @else {
+                Save Move Set
+              }
             </button>
           </div>
         </div>
@@ -126,7 +133,9 @@
         </div>
       }
       @if (moveEditorSuccess()) {
-        <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+        <div
+          class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"
+        >
           {{ moveEditorSuccess() }}
         </div>
       }
