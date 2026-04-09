@@ -161,6 +161,7 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly connectedUsers = new Map<string, GatewayUser>();
   private readonly matches = new Map<string, PvpMatch>();
   private readonly userToMatch = new Map<string, string>();
+  private readonly disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -172,11 +173,32 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const user = await this.authenticateSocket(client);
       this.connectedUsers.set(client.id, user);
+      const pendingForfeit = this.disconnectTimers.get(user.id);
+      if (pendingForfeit) {
+        clearTimeout(pendingForfeit);
+        this.disconnectTimers.delete(user.id);
+      }
       client.emit('queue:ready', {
         userId: user.id,
         username: user.username,
         rating: user.rating,
       });
+      const matchId = this.userToMatch.get(user.id);
+      if (matchId) {
+        const match = this.matches.get(matchId);
+        if (match) {
+          const side = this.sideForUser(match, user.id);
+          if (side === 'A') {
+            match.participantA.socketId = client.id;
+            match.participantA.isConnected = true;
+          } else if (side === 'B') {
+            match.participantB.socketId = client.id;
+            match.participantB.isConnected = true;
+          }
+          this.emitState(match);
+          client.emit('match:resume', { matchId });
+        }
+      }
       this.logger.log(`PVP socket connected: ${user.id} (${client.id})`);
     } catch {
       this.logger.warn(`PVP auth failed for socket ${client.id}`);
@@ -194,7 +216,26 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (user) {
       const matchId = this.userToMatch.get(user.id);
       if (matchId) {
-        void this.handleDisconnectForfeit(matchId, user.id);
+        const match = this.matches.get(matchId);
+        if (match) {
+          const side = this.sideForUser(match, user.id);
+          if (side === 'A') {
+            match.participantA.isConnected = false;
+          } else if (side === 'B') {
+            match.participantB.isConnected = false;
+          }
+          this.emitState(match);
+        }
+
+        const existingTimer = this.disconnectTimers.get(user.id);
+        if (existingTimer) {
+          clearTimeout(existingTimer);
+        }
+        const timer = setTimeout(() => {
+          this.disconnectTimers.delete(user.id);
+          void this.handleDisconnectForfeit(matchId, user.id);
+        }, 12_000);
+        this.disconnectTimers.set(user.id, timer);
       }
     }
 
@@ -452,6 +493,16 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.emitState(match);
       if (match.status === 'FINISHED') {
+        const timerA = this.disconnectTimers.get(match.participantA.userId);
+        if (timerA) {
+          clearTimeout(timerA);
+          this.disconnectTimers.delete(match.participantA.userId);
+        }
+        const timerB = this.disconnectTimers.get(match.participantB.userId);
+        if (timerB) {
+          clearTimeout(timerB);
+          this.disconnectTimers.delete(match.participantB.userId);
+        }
         this.userToMatch.delete(match.participantA.userId);
         this.userToMatch.delete(match.participantB.userId);
         this.matches.delete(match.id);
@@ -976,6 +1027,16 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
     await this.finalizeMatch(match);
     this.emitState(match);
 
+    const timerA = this.disconnectTimers.get(match.participantA.userId);
+    if (timerA) {
+      clearTimeout(timerA);
+      this.disconnectTimers.delete(match.participantA.userId);
+    }
+    const timerB = this.disconnectTimers.get(match.participantB.userId);
+    if (timerB) {
+      clearTimeout(timerB);
+      this.disconnectTimers.delete(match.participantB.userId);
+    }
     this.userToMatch.delete(match.participantA.userId);
     this.userToMatch.delete(match.participantB.userId);
     this.matches.delete(match.id);

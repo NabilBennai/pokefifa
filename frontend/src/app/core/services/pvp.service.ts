@@ -4,6 +4,7 @@ import { ReplaySubject, Subject } from 'rxjs';
 import {
   PvpBattleState,
   PvpMatchFoundEvent,
+  PvpMatchResumeEvent,
   PvpQueueErrorEvent,
   PvpQueueJoinedEvent,
   PvpQueueLeftEvent,
@@ -21,6 +22,7 @@ export class PvpService {
   private readonly queueLeftSubject = new Subject<PvpQueueLeftEvent>();
   private readonly queueErrorSubject = new Subject<PvpQueueErrorEvent>();
   private readonly matchFoundSubject = new Subject<PvpMatchFoundEvent>();
+  private readonly matchResumeSubject = new Subject<PvpMatchResumeEvent>();
   private readonly battleStateSubject = new Subject<PvpBattleState>();
   private readonly battleErrorSubject = new Subject<PvpQueueErrorEvent>();
   private readonly disconnectedSubject = new Subject<void>();
@@ -30,6 +32,7 @@ export class PvpService {
   readonly queueLeft$ = this.queueLeftSubject.asObservable();
   readonly queueError$ = this.queueErrorSubject.asObservable();
   readonly matchFound$ = this.matchFoundSubject.asObservable();
+  readonly matchResume$ = this.matchResumeSubject.asObservable();
   readonly battleState$ = this.battleStateSubject.asObservable();
   readonly battleError$ = this.battleErrorSubject.asObservable();
   readonly disconnected$ = this.disconnectedSubject.asObservable();
@@ -127,6 +130,9 @@ export class PvpService {
     });
     socket.on('match:found', (payload: PvpMatchFoundEvent) => {
       this.matchFoundSubject.next(payload);
+    });
+    socket.on('match:resume', (payload: PvpMatchResumeEvent) => {
+      this.matchResumeSubject.next(payload);
     });
     socket.on('match:state', (payload: PvpBattleState) => {
       this.battleStateSubject.next(payload);

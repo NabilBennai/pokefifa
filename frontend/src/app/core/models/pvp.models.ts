@@ -26,6 +26,10 @@ export type PvpMatchFoundEvent = {
   matchedAt: string;
 };
 
+export type PvpMatchResumeEvent = {
+  matchId: string;
+};
+
 export type PvpQueueErrorEvent = {
   message: string;
 };

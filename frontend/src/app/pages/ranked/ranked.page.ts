@@ -295,6 +295,14 @@ export class RankedPageComponent implements OnDestroy {
       }),
     );
     this.pvpSubscriptions.add(
+      this.pvpService.matchResume$.subscribe((event) => {
+        this.queueConnected.set(true);
+        this.queueSearching.set(false);
+        this.queueInfo.set('Reconnected to an active PvP match.');
+        this.pvpService.joinMatch(event.matchId);
+      }),
+    );
+    this.pvpSubscriptions.add(
       this.pvpService.battleState$.subscribe((state) => {
         this.actionPending.set(false);
         this.liveBattle.set(state);
