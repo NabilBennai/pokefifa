@@ -1,12 +1,15 @@
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
-import { finalize } from 'rxjs';
+import { Component, OnDestroy, inject, signal } from '@angular/core';
+import { Subscription, finalize, firstValueFrom } from 'rxjs';
+import { take } from 'rxjs/operators';
 import { LiveBattleState } from '../../core/models/battle.models';
+import { PvpBattleState } from '../../core/models/pvp.models';
 import { RankedOverviewResponse } from '../../core/models/ranked.models';
 import { Team } from '../../core/models/team.models';
 import { AuthService } from '../../core/services/auth.service';
 import { BattlesService } from '../../core/services/battles.service';
+import { PvpService } from '../../core/services/pvp.service';
 import { RankedService } from '../../core/services/ranked.service';
 import { TeamsService } from '../../core/services/teams.service';
 import { BattleLiveModalComponent } from '../../shared/components/battle-live-modal/battle-live-modal.component';
@@ -16,11 +19,14 @@ import { BattleLiveModalComponent } from '../../shared/components/battle-live-mo
   imports: [DatePipe, BattleLiveModalComponent],
   templateUrl: './ranked.page.html',
 })
-export class RankedPageComponent {
+export class RankedPageComponent implements OnDestroy {
   private readonly rankedService = inject(RankedService);
   private readonly battlesService = inject(BattlesService);
   private readonly teamsService = inject(TeamsService);
   private readonly authService = inject(AuthService);
+  private readonly pvpService = inject(PvpService);
+  private readonly pvpSubscriptions = new Subscription();
+  private liveCloseTimer: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly user = this.authService.user;
   protected readonly loading = signal(false);
@@ -31,12 +37,23 @@ export class RankedPageComponent {
   protected readonly overview = signal<RankedOverviewResponse | null>(null);
   protected readonly teams = signal<Team[]>([]);
   protected readonly selectedTeamId = signal<string | null>(null);
-  protected readonly liveBattle = signal<LiveBattleState | null>(null);
+  protected readonly liveBattle = signal<LiveBattleState | PvpBattleState | null>(null);
   protected readonly liveOpen = signal(false);
   protected readonly actionPending = signal(false);
+  protected readonly queueConnected = signal(false);
+  protected readonly queueSearching = signal(false);
+  protected readonly queueInfo = signal<string | null>(null);
+  protected readonly queueError = signal<string | null>(null);
 
   constructor() {
+    this.bindPvpEvents();
     this.loadData();
+  }
+
+  ngOnDestroy(): void {
+    this.clearLiveCloseTimer();
+    this.pvpSubscriptions.unsubscribe();
+    this.pvpService.disconnect();
   }
 
   protected loadData(): void {
@@ -99,6 +116,16 @@ export class RankedPageComponent {
       return;
     }
 
+    if (this.isPvpBattle(battle)) {
+      if (!battle.canAct) {
+        this.error.set('Wait for your turn.');
+        return;
+      }
+      this.actionPending.set(true);
+      this.pvpService.sendMove(battle.matchId, moveIndex);
+      return;
+    }
+
     this.actionPending.set(true);
     this.battlesService
       .playLiveTurn(battle.battleId, moveIndex)
@@ -118,10 +145,7 @@ export class RankedPageComponent {
             );
             this.authService.refreshProfile().subscribe();
             this.loadData();
-            setTimeout(() => {
-              this.liveOpen.set(false);
-              this.liveBattle.set(null);
-            }, 1000);
+            this.scheduleLiveClose(1000);
           }
         },
         error: (error: HttpErrorResponse) => {
@@ -133,6 +157,16 @@ export class RankedPageComponent {
   protected playSwitch(switchIndex: number): void {
     const battle = this.liveBattle();
     if (!battle || battle.finished) {
+      return;
+    }
+
+    if (this.isPvpBattle(battle)) {
+      if (!battle.canAct) {
+        this.error.set('Wait for your turn.');
+        return;
+      }
+      this.actionPending.set(true);
+      this.pvpService.sendSwitch(battle.matchId, switchIndex);
       return;
     }
 
@@ -155,10 +189,7 @@ export class RankedPageComponent {
             );
             this.authService.refreshProfile().subscribe();
             this.loadData();
-            setTimeout(() => {
-              this.liveOpen.set(false);
-              this.liveBattle.set(null);
-            }, 1000);
+            this.scheduleLiveClose(1000);
           }
         },
         error: (error: HttpErrorResponse) => {
@@ -194,6 +225,129 @@ export class RankedPageComponent {
   }
 
   protected closeLive(): void {
+    this.clearLiveCloseTimer();
     this.liveOpen.set(false);
+  }
+
+  protected requestRematch(): void {
+    this.clearLiveCloseTimer();
+    this.liveOpen.set(false);
+    this.liveBattle.set(null);
+    void this.joinPvpQueue();
+  }
+
+  protected async joinPvpQueue(): Promise<void> {
+    this.queueError.set(null);
+    this.queueInfo.set(null);
+
+    const accessToken = this.authService.getAccessToken();
+    if (!accessToken) {
+      this.queueError.set('You must be logged in to queue.');
+      return;
+    }
+
+    try {
+      await this.pvpService.connect(accessToken);
+      this.queueConnected.set(true);
+      await firstValueFrom(this.pvpService.queueReady$.pipe(take(1)));
+      this.pvpService.joinQueue(this.selectedTeamId() ?? undefined);
+      this.queueInfo.set('Searching for an opponent...');
+    } catch {
+      this.queueConnected.set(false);
+      this.queueSearching.set(false);
+      this.queueError.set('Could not connect to PvP queue.');
+    }
+  }
+
+  protected leavePvpQueue(): void {
+    this.pvpService.leaveQueue();
+    this.pvpService.disconnect();
+    this.queueConnected.set(false);
+    this.queueSearching.set(false);
+    this.queueInfo.set('Queue left.');
+  }
+
+  private bindPvpEvents(): void {
+    this.pvpSubscriptions.add(
+      this.pvpService.queueJoined$.subscribe((event) => {
+        this.queueSearching.set(true);
+        this.queueInfo.set(`Queued with ${event.queueSize} player(s) in queue.`);
+      }),
+    );
+    this.pvpSubscriptions.add(
+      this.pvpService.queueLeft$.subscribe(() => {
+        this.queueSearching.set(false);
+        this.queueInfo.set('Queue left.');
+      }),
+    );
+    this.pvpSubscriptions.add(
+      this.pvpService.queueError$.subscribe((event) => {
+        this.queueError.set(event.message);
+        this.queueSearching.set(false);
+      }),
+    );
+    this.pvpSubscriptions.add(
+      this.pvpService.matchFound$.subscribe((event) => {
+        this.queueSearching.set(false);
+        this.queueInfo.set(`Matched vs ${event.opponent.username} (${event.opponent.rating}).`);
+        this.success.set(`PvP match found against ${event.opponent.username}.`);
+        this.pvpService.joinMatch(event.matchId);
+      }),
+    );
+    this.pvpSubscriptions.add(
+      this.pvpService.battleState$.subscribe((state) => {
+        this.actionPending.set(false);
+        this.liveBattle.set(state);
+        this.liveOpen.set(true);
+        if (state.finished) {
+          const result =
+            state.result ??
+            (state.winnerSide === 'A' ? 'WIN' : state.winnerSide === 'B' ? 'LOSS' : 'DRAW');
+          const coins = state.rewards?.coins ?? 0;
+          const xp = state.rewards?.xp ?? 0;
+          const delta = state.ratingDelta ?? 0;
+          this.success.set(
+            `PvP finished: ${result}. +${coins} coins, +${xp} xp, ${delta >= 0 ? '+' : ''}${delta} rating.`,
+          );
+          this.authService.refreshProfile().subscribe();
+          this.loadData();
+        this.queueConnected.set(false);
+          this.scheduleLiveClose(1500);
+        }
+      }),
+    );
+    this.pvpSubscriptions.add(
+      this.pvpService.battleError$.subscribe((event) => {
+        this.actionPending.set(false);
+        this.error.set(event.message);
+      }),
+    );
+    this.pvpSubscriptions.add(
+      this.pvpService.disconnected$.subscribe(() => {
+        this.queueConnected.set(false);
+        this.queueSearching.set(false);
+      }),
+    );
+  }
+
+  private isPvpBattle(battle: LiveBattleState | PvpBattleState): battle is PvpBattleState {
+    return 'matchId' in battle;
+  }
+
+  private scheduleLiveClose(delayMs: number): void {
+    this.clearLiveCloseTimer();
+    this.liveCloseTimer = setTimeout(() => {
+      this.liveOpen.set(false);
+      this.liveBattle.set(null);
+      this.liveCloseTimer = null;
+    }, delayMs);
+  }
+
+  private clearLiveCloseTimer(): void {
+    if (!this.liveCloseTimer) {
+      return;
+    }
+    clearTimeout(this.liveCloseTimer);
+    this.liveCloseTimer = null;
   }
 }

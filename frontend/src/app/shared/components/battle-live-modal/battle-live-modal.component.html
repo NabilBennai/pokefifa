@@ -5,6 +5,18 @@
     <div class="fr-shell w-full max-w-3xl">
       <div class="fr-head">
         <p class="fr-title">Live Battle - Turn {{ battle.turn }}</p>
+        @if (isPvpBattle(battle)) {
+          <p
+            class="rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em]"
+            [class]="
+              battle.opponentConnected
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                : 'border-red-300 bg-red-50 text-red-700'
+            "
+          >
+            Opponent {{ battle.opponentConnected ? 'Online' : 'Disconnected' }}
+          </p>
+        }
         <button type="button" class="fr-close" (click)="close()">Close</button>
       </div>
 
@@ -87,6 +99,11 @@
             }
           </p>
           <div class="fr-actions">
+            @if (battle.queue === 'RANKED') {
+              <button type="button" class="btn-poke-soft px-3 py-2 text-xs" (click)="requestRematch()">
+                Rematch
+              </button>
+            }
             <button type="button" class="btn-poke px-3 py-2 text-xs" (click)="close()">
               Continue
             </button>

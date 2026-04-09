@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { LiveBattleState } from '../../../core/models/battle.models';
+import { PvpBattleState } from '../../../core/models/pvp.models';
 
 @Component({
   selector: 'app-battle-live-modal',
@@ -9,11 +10,12 @@ import { LiveBattleState } from '../../../core/models/battle.models';
 })
 export class BattleLiveModalComponent implements OnChanges {
   @Input() open = false;
-  @Input() battle: LiveBattleState | null = null;
+  @Input() battle: LiveBattleState | PvpBattleState | null = null;
   @Input() pending = false;
   @Output() closed = new EventEmitter<void>();
   @Output() moveSelected = new EventEmitter<number>();
   @Output() switchSelected = new EventEmitter<number>();
+  @Output() rematchRequested = new EventEmitter<void>();
   protected showSwitchPicker = false;
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -74,5 +76,16 @@ export class BattleLiveModalComponent implements OnChanges {
 
   protected close(): void {
     this.closed.emit();
+  }
+
+  protected isPvpBattle(battle: LiveBattleState | PvpBattleState | null): battle is PvpBattleState {
+    return !!battle && 'matchId' in battle;
+  }
+
+  protected requestRematch(): void {
+    if (this.pending) {
+      return;
+    }
+    this.rematchRequested.emit();
   }
 }
