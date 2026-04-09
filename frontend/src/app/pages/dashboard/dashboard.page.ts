@@ -5,10 +5,11 @@ import { finalize } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { CreaturesService } from '../../core/services/creatures.service';
 import { PacksService } from '../../core/services/packs.service';
+import { TranslatePipe } from '../../shared/pipes/t.pipe';
 
 @Component({
   selector: 'app-dashboard-page',
-  imports: [RouterLink],
+  imports: [RouterLink, TranslatePipe],
   templateUrl: './dashboard.page.html',
 })
 export class DashboardPageComponent {

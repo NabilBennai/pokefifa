@@ -9,10 +9,11 @@ import {
   SimpleChanges,
 } from '@angular/core';
 import { AiBattleResponse } from '../../../core/models/battle.models';
+import { TranslatePipe } from '../../pipes/t.pipe';
 
 @Component({
   selector: 'app-battle-replay-modal',
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   templateUrl: './battle-replay-modal.component.html',
 })
 export class BattleReplayModalComponent implements OnChanges, OnDestroy {

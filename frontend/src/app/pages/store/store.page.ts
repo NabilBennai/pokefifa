@@ -1,17 +1,22 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
+import { LanguageService } from '../../core/i18n/language.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PacksService } from '../../core/services/packs.service';
 import { StorePackItem } from '../../core/models/pack.models';
+import { L10nPipe } from '../../shared/pipes/l10n.pipe';
+import { TranslatePipe } from '../../shared/pipes/t.pipe';
 
 @Component({
   selector: 'app-store-page',
+  imports: [TranslatePipe, L10nPipe],
   templateUrl: './store.page.html',
 })
 export class StorePageComponent {
   private readonly packsService = inject(PacksService);
   private readonly authService = inject(AuthService);
+  private readonly languageService = inject(LanguageService);
 
   protected readonly user = this.authService.user;
   protected readonly loading = signal(false);
@@ -48,8 +53,19 @@ export class StorePageComponent {
       .pipe(finalize(() => this.buyingPackId.set(null)))
       .subscribe({
         next: (response) => {
+          const packSlug = response.purchasedPack.packDefinition.slug;
+          const packName = this.localized(
+            'pack',
+            packSlug,
+            response.purchasedPack.packDefinition.name,
+          );
+          const currency = this.localized(
+            'currency',
+            response.spent.currencyType,
+            response.spent.currencyType.toLowerCase(),
+          );
           this.success.set(
-            `Purchased ${response.purchasedPack.packDefinition.name} for ${response.spent.amount} ${response.spent.currencyType.toLowerCase()}.`,
+            `${this.languageService.t('store.purchasedPrefix')} ${packName} ${this.languageService.t('store.purchasedFor')} ${response.spent.amount} ${currency}.`,
           );
           this.authService.refreshProfile().subscribe();
         },
@@ -65,5 +81,11 @@ export class StorePageComponent {
 
   protected canBuyGems(pack: StorePackItem): boolean {
     return pack.gemPrice !== null && (this.user()?.gems ?? 0) >= pack.gemPrice;
+  }
+
+  private localized(prefix: string, slug: string, fallback: string): string {
+    const key = `${prefix}.${slug.trim().toLowerCase().replace(/_/g, '-').replace(/\s+/g, '-')}`;
+    const translated = this.languageService.t(key);
+    return translated === key ? fallback : translated;
   }
 }

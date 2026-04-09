@@ -1,6 +1,9 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { HttpI18nExceptionFilter } from './i18n/http-i18n-exception.filter';
+import { I18nService } from './i18n/i18n.service';
+import { LocaleInterceptor } from './i18n/locale.interceptor';
 import { AppModule } from './app.module';
 
 function parseCorsOrigins(rawOrigins: string | undefined): string[] {
@@ -54,6 +57,8 @@ export async function createConfiguredApp() {
       transform: true,
     }),
   );
+  app.useGlobalInterceptors(new LocaleInterceptor());
+  app.useGlobalFilters(new HttpI18nExceptionFilter(app.get(I18nService)));
 
   return app;
 }

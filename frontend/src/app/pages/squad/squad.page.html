@@ -1,11 +1,13 @@
 <section class="space-y-6">
   <div class="panel-pokedex arena-shell p-8">
-    <p class="text-xs font-bold uppercase tracking-[0.14em] text-red-700">Squad Builder</p>
+    <p class="text-xs font-bold uppercase tracking-[0.14em] text-red-700">
+      {{ 'squad.kicker' | t }}
+    </p>
     <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900">
-      Build Your Starting XI... of 6
+      {{ 'squad.title' | t }}
     </h1>
     <p class="mt-2 text-sm text-slate-600">
-      Select up to 6 creatures and save as your default competitive squad.
+      {{ 'squad.subtitle' | t }}
     </p>
   </div>
 
@@ -25,24 +27,26 @@
   <article class="panel-pokedex p-6">
     <div class="flex flex-wrap items-end gap-3">
       <div class="min-w-56 flex-1">
-        <label class="text-xs font-bold uppercase tracking-wide text-slate-500">Team Name</label>
+        <label class="text-xs font-bold uppercase tracking-wide text-slate-500">{{
+          'squad.teamName' | t
+        }}</label>
         <input
           class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
           [value]="teamName()"
           (input)="teamName.set($any($event.target).value)"
-          placeholder="Main Squad"
+          [placeholder]="'squad.placeholderTeamName' | t"
         />
       </div>
       <div class="min-w-56">
-        <label class="text-xs font-bold uppercase tracking-wide text-slate-500"
-          >Existing Team</label
-        >
+        <label class="text-xs font-bold uppercase tracking-wide text-slate-500">{{
+          'squad.existingTeam' | t
+        }}</label>
         <select
           class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
           [value]="selectedTeamId() ?? ''"
           (change)="selectTeam($any($event.target).value)"
         >
-          <option value="">New Team</option>
+          <option value="">{{ 'squad.newTeam' | t }}</option>
           @for (team of teams(); track team.id) {
             <option [value]="team.id">{{ teamLabel(team) }}</option>
           }
@@ -50,23 +54,27 @@
       </div>
       <button type="button" class="btn-poke px-4 py-2" [disabled]="saving()" (click)="saveTeam()">
         @if (saving()) {
-          Saving...
+          {{ 'squad.saving' | t }}
         } @else {
-          Save Team
+          {{ 'squad.saveTeam' | t }}
         }
       </button>
-      <button type="button" class="btn-poke-soft px-4 py-2" (click)="loadData()">Refresh</button>
+      <button type="button" class="btn-poke-soft px-4 py-2" (click)="loadData()">
+        {{ 'common.refresh' | t }}
+      </button>
     </div>
-    <p class="mt-3 text-sm text-slate-600">Selected: {{ selectedCreatureIds().length }} / 6</p>
+    <p class="mt-3 text-sm text-slate-600">
+      {{ 'squad.selected' | t }}: {{ selectedCreatureIds().length }} / 6
+    </p>
   </article>
 
   <article class="panel-pokedex p-6">
-    <h2 class="text-xl font-bold text-slate-900">Your Creatures</h2>
+    <h2 class="text-xl font-bold text-slate-900">{{ 'squad.yourCreatures' | t }}</h2>
 
     @if (loading()) {
-      <p class="mt-4 text-sm text-slate-500">Loading squad data...</p>
+      <p class="mt-4 text-sm text-slate-500">{{ 'squad.loading' | t }}</p>
     } @else if (creatures().length === 0) {
-      <p class="mt-4 text-sm text-slate-500">No creatures yet. Open packs first.</p>
+      <p class="mt-4 text-sm text-slate-500">{{ 'squad.empty' | t }}</p>
     } @else {
       <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         @for (creature of creatures(); track creature.id) {
@@ -80,16 +88,21 @@
             (click)="toggleCreature(creature.id)"
           >
             <p class="text-sm font-bold text-slate-900">
-              {{ creature.nickname || creature.species.name }}
+              {{
+                creature.nickname ||
+                  (creature.species.slug | l10n: 'pokemon' : creature.species.name)
+              }}
             </p>
             <p class="mt-1 text-xs text-slate-500">
-              {{ creature.species.primaryType }}
+              {{ creature.species.primaryType | l10n: 'type' : creature.species.primaryType }}
               @if (creature.species.secondaryType) {
-                / {{ creature.species.secondaryType }}
+                /
+                {{ creature.species.secondaryType | l10n: 'type' : creature.species.secondaryType }}
               }
             </p>
             <p class="mt-1 text-xs text-slate-600">
-              Lv {{ creature.level }} · {{ creature.species.rarity }}
+              Lv {{ creature.level }} �
+              {{ creature.species.rarity | l10n: 'rarity' : creature.species.rarity }}
             </p>
           </button>
         }

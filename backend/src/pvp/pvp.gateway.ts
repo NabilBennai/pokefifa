@@ -441,7 +441,13 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
           match.status = 'FINISHED';
           match.winner = side;
         } else {
-          match.turnSide = target.mustSwitch ? (side === 'A' ? 'B' : 'A') : (side === 'A' ? 'B' : 'A');
+          match.turnSide = target.mustSwitch
+            ? side === 'A'
+              ? 'B'
+              : 'A'
+            : side === 'A'
+              ? 'B'
+              : 'A';
           if (target.mustSwitch) {
             match.log.push(`${target.username} must switch.`);
           } else {
@@ -592,7 +598,12 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
       let opponent: QueueEntry | null = null;
       for (let j = i + 1; j < sorted.length; j += 1) {
         const b = sorted[j];
-        if (!b || matchedIds.has(b.userId) || b.userId === a.userId || this.userToMatch.has(b.userId)) {
+        if (
+          !b ||
+          matchedIds.has(b.userId) ||
+          b.userId === a.userId ||
+          this.userToMatch.has(b.userId)
+        ) {
           continue;
         }
         if (this.canMatch(a, b)) {
@@ -730,17 +741,36 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const learnedMoves = creature.learnedMoves
         .sort((x, y) => x.slot - y.slot)
         .slice(0, 4)
-        .map((entry) => this.toCombatMove(entry.move.slug, entry.move.name, entry.move.type, entry.move.power, entry.move.accuracy));
+        .map((entry) =>
+          this.toCombatMove(
+            entry.move.slug,
+            entry.move.name,
+            entry.move.type,
+            entry.move.power,
+            entry.move.accuracy,
+          ),
+        );
 
       const speciesMoves = species.moves
         .filter((entry) => entry.isDefault || entry.unlockLevel <= creature.level)
         .sort((x, y) => x.unlockLevel - y.unlockLevel)
         .slice(0, 4)
-        .map((entry) => this.toCombatMove(entry.move.slug, entry.move.name, entry.move.type, entry.move.power, entry.move.accuracy));
+        .map((entry) =>
+          this.toCombatMove(
+            entry.move.slug,
+            entry.move.name,
+            entry.move.type,
+            entry.move.power,
+            entry.move.accuracy,
+          ),
+        );
 
-      const moves = learnedMoves.length > 0 ? learnedMoves : speciesMoves.length > 0 ? speciesMoves : [
-        this.toCombatMove('struggle', 'Struggle', 'normal', 40, 100),
-      ];
+      const moves =
+        learnedMoves.length > 0
+          ? learnedMoves
+          : speciesMoves.length > 0
+            ? speciesMoves
+            : [this.toCombatMove('struggle', 'Struggle', 'normal', 40, 100)];
 
       const maxHp = this.calculateHp(species.baseHp, creature.level);
       return {
@@ -781,10 +811,14 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return 'It missed.';
     }
 
-    const stab = move.type === attacker.primaryType || move.type === attacker.secondaryType ? 1.2 : 1;
+    const stab =
+      move.type === attacker.primaryType || move.type === attacker.secondaryType ? 1.2 : 1;
     const randomFactor = this.randomFloat(0.85, 1);
     const base =
-      (((2 * attacker.level) / 5 + 2) * move.power * (attacker.attack / Math.max(1, target.defense))) / 50 +
+      (((2 * attacker.level) / 5 + 2) *
+        move.power *
+        (attacker.attack / Math.max(1, target.defense))) /
+        50 +
       2;
     const damage = Math.max(1, Math.floor(base * stab * randomFactor));
 
@@ -822,13 +856,21 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private async finalizeMatch(match: PvpMatch): Promise<void> {
     const winner = match.winner ?? this.resolveWinner(match);
-    const resultA = winner === 'A' ? BattleResult.WIN : winner === 'B' ? BattleResult.LOSS : BattleResult.DRAW;
-    const resultB = winner === 'B' ? BattleResult.WIN : winner === 'A' ? BattleResult.LOSS : BattleResult.DRAW;
+    const resultA =
+      winner === 'A' ? BattleResult.WIN : winner === 'B' ? BattleResult.LOSS : BattleResult.DRAW;
+    const resultB =
+      winner === 'B' ? BattleResult.WIN : winner === 'A' ? BattleResult.LOSS : BattleResult.DRAW;
 
     await this.prisma.$transaction(async (tx) => {
       const [userA, userB] = await Promise.all([
-        tx.user.findUniqueOrThrow({ where: { id: match.participantA.userId }, select: { rating: true, level: true, xp: true } }),
-        tx.user.findUniqueOrThrow({ where: { id: match.participantB.userId }, select: { rating: true, level: true, xp: true } }),
+        tx.user.findUniqueOrThrow({
+          where: { id: match.participantA.userId },
+          select: { rating: true, level: true, xp: true },
+        }),
+        tx.user.findUniqueOrThrow({
+          where: { id: match.participantB.userId },
+          select: { rating: true, level: true, xp: true },
+        }),
       ]);
 
       const actualA = resultA === BattleResult.WIN ? 1 : resultA === BattleResult.DRAW ? 0.5 : 0;
@@ -884,7 +926,11 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
           playerATeamId: match.participantA.teamId,
           playerBTeamId: match.participantB.teamId,
           winnerUserId:
-            winner === 'A' ? match.participantA.userId : winner === 'B' ? match.participantB.userId : null,
+            winner === 'A'
+              ? match.participantA.userId
+              : winner === 'B'
+                ? match.participantB.userId
+                : null,
           resultForA: resultA,
           resultForB: resultB,
           playerARatingBefore: userA.rating,
@@ -945,8 +991,12 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   private emitState(match: PvpMatch): void {
-    this.server.to(match.participantA.socketId).emit('match:state', this.buildPlayerView(match, 'A'));
-    this.server.to(match.participantB.socketId).emit('match:state', this.buildPlayerView(match, 'B'));
+    this.server
+      .to(match.participantA.socketId)
+      .emit('match:state', this.buildPlayerView(match, 'A'));
+    this.server
+      .to(match.participantB.socketId)
+      .emit('match:state', this.buildPlayerView(match, 'B'));
   }
 
   private buildPlayerView(match: PvpMatch, side: 'A' | 'B') {
@@ -957,7 +1007,13 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const activeOpponent = opponent.combatants[opponent.activeIndex] ?? null;
 
     const winnerSide =
-      match.winner === null ? null : match.winner === side ? 'A' : match.winner === 'DRAW' ? 'DRAW' : 'B';
+      match.winner === null
+        ? null
+        : match.winner === side
+          ? 'A'
+          : match.winner === 'DRAW'
+            ? 'DRAW'
+            : 'B';
 
     return {
       matchId: match.id,
@@ -982,7 +1038,10 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
             slug: activePlayer.slug,
             hp: activePlayer.currentHp,
             maxHp: activePlayer.maxHp,
-            hpPercent: Math.max(0, Math.round((activePlayer.currentHp / Math.max(1, activePlayer.maxHp)) * 100)),
+            hpPercent: Math.max(
+              0,
+              Math.round((activePlayer.currentHp / Math.max(1, activePlayer.maxHp)) * 100),
+            ),
             statusCondition: null,
             moves: activePlayer.moves,
             teamRemaining: player.combatants.filter((c) => c.currentHp > 0).length,
@@ -997,7 +1056,8 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
         statusCondition: null,
         isActive: index === player.activeIndex,
         isFainted: combatant.currentHp <= 0,
-        canSwitch: combatant.currentHp > 0 && (!player.mustSwitch ? index !== player.activeIndex : true),
+        canSwitch:
+          combatant.currentHp > 0 && (!player.mustSwitch ? index !== player.activeIndex : true),
       })),
       opponent: activeOpponent
         ? {
@@ -1005,7 +1065,10 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
             slug: activeOpponent.slug,
             hp: activeOpponent.currentHp,
             maxHp: activeOpponent.maxHp,
-            hpPercent: Math.max(0, Math.round((activeOpponent.currentHp / Math.max(1, activeOpponent.maxHp)) * 100)),
+            hpPercent: Math.max(
+              0,
+              Math.round((activeOpponent.currentHp / Math.max(1, activeOpponent.maxHp)) * 100),
+            ),
             statusCondition: null,
             teamRemaining: opponent.combatants.filter((c) => c.currentHp > 0).length,
           }
@@ -1015,7 +1078,10 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
     };
   }
 
-  private async handleDisconnectForfeit(matchId: string, disconnectedUserId: string): Promise<void> {
+  private async handleDisconnectForfeit(
+    matchId: string,
+    disconnectedUserId: string,
+  ): Promise<void> {
     const match = this.matches.get(matchId);
     if (!match || match.status === 'FINISHED') {
       return;
@@ -1033,7 +1099,9 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     match.status = 'FINISHED';
     match.winner = side === 'A' ? 'B' : 'A';
-    match.log.push(`${side === 'A' ? match.participantA.username : match.participantB.username} disconnected. Forfeit.`);
+    match.log.push(
+      `${side === 'A' ? match.participantA.username : match.participantB.username} disconnected. Forfeit.`,
+    );
     await this.finalizeMatch(match);
     this.emitState(match);
 

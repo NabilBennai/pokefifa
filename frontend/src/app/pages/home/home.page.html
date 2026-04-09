@@ -6,42 +6,52 @@
           class="inline-flex items-center gap-2 rounded-full border border-red-200 bg-white/85 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-red-700"
         >
           <span class="pokeball-dot"></span>
-          Ultimate Team Creature Arena
+          {{ 'home.badge' | t }}
         </span>
 
         <h1 class="max-w-3xl text-4xl font-black leading-tight text-slate-900 sm:text-5xl">
-          Build a Legendary Club,
-          <span class="text-brand-600">Open Packs</span>, Dominate Ranked Battles
+          {{ 'home.title' | t }}
         </h1>
 
         <p class="max-w-2xl text-base leading-relaxed text-slate-700 sm:text-lg">
-          Pokefifa blends FUT progression with monster battling. Collect creatures, stack your
-          roster depth, optimize move pools, and climb the competitive ladder.
+          {{ 'home.subtitle' | t }}
         </p>
 
         <div class="flex flex-wrap gap-3">
           @if (isAuthenticated()) {
-            <a routerLink="/dashboard" class="btn-poke px-6">Go to Dashboard</a>
-            <span class="btn-poke-soft">Signed in as {{ user()?.username }}</span>
+            <a routerLink="/dashboard" class="btn-poke px-6">{{ 'home.goDashboard' | t }}</a>
+            <span class="btn-poke-soft">{{
+              'nav.signedInAs' | t: { username: user()?.username ?? '' }
+            }}</span>
           } @else {
-            <a routerLink="/register" class="btn-poke px-6">Create Club</a>
-            <a routerLink="/login" class="btn-poke-soft px-6">Login</a>
+            <a routerLink="/register" class="btn-poke px-6">{{ 'home.createClub' | t }}</a>
+            <a routerLink="/login" class="btn-poke-soft px-6">{{ 'nav.login' | t }}</a>
           }
         </div>
       </div>
 
       <div class="grid gap-4">
         <article class="rounded-2xl border border-red-100 bg-white/90 p-5 shadow-sm">
-          <p class="text-xs font-bold uppercase tracking-wider text-red-600">Pack Economy</p>
-          <p class="mt-2 text-xl font-black text-slate-900">Bronze / Silver / Elite / Event</p>
+          <p class="text-xs font-bold uppercase tracking-wider text-red-600">
+            {{ 'home.packEconomy' | t }}
+          </p>
+          <p class="mt-2 text-xl font-black text-slate-900">
+            {{ 'Bronze / Silver / Elite / Event' | t }}
+          </p>
         </article>
         <article class="rounded-2xl border border-yellow-100 bg-white/90 p-5 shadow-sm">
-          <p class="text-xs font-bold uppercase tracking-wider text-amber-600">Battle Modes</p>
-          <p class="mt-2 text-xl font-black text-slate-900">Casual, Ranked, AI</p>
+          <p class="text-xs font-bold uppercase tracking-wider text-amber-600">
+            {{ 'home.battleModes' | t }}
+          </p>
+          <p class="mt-2 text-xl font-black text-slate-900">{{ 'Casual, Ranked, AI' | t }}</p>
         </article>
         <article class="rounded-2xl border border-sky-100 bg-white/90 p-5 shadow-sm">
-          <p class="text-xs font-bold uppercase tracking-wider text-sky-600">Progression</p>
-          <p class="mt-2 text-xl font-black text-slate-900">Level, XP, Rating, Currencies</p>
+          <p class="text-xs font-bold uppercase tracking-wider text-sky-600">
+            {{ 'home.progression' | t }}
+          </p>
+          <p class="mt-2 text-xl font-black text-slate-900">
+            {{ 'Level, XP, Rating, Currencies' | t }}
+          </p>
         </article>
       </div>
     </div>
@@ -49,29 +59,26 @@
 
   <div class="grid gap-6 md:grid-cols-3">
     <article class="panel-pokedex p-6">
-      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">Step 1</p>
-      <h2 class="mt-2 text-lg font-black text-slate-900">Create Your Trainer Identity</h2>
+      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">{{ 'Step 1' | t }}</p>
+      <h2 class="mt-2 text-lg font-black text-slate-900">{{ 'home.step1.title' | t }}</h2>
       <p class="mt-2 text-sm leading-relaxed text-slate-700">
-        Register with your username and secure credentials. Your club starts with gift packs for
-        your first roster.
+        {{ 'home.step1.body' | t }}
       </p>
     </article>
 
     <article class="panel-pokedex p-6">
-      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">Step 2</p>
-      <h2 class="mt-2 text-lg font-black text-slate-900">Open Packs and Scout Talent</h2>
+      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">{{ 'Step 2' | t }}</p>
+      <h2 class="mt-2 text-lg font-black text-slate-900">{{ 'home.step2.title' | t }}</h2>
       <p class="mt-2 text-sm leading-relaxed text-slate-700">
-        Reveal creatures and items from weighted drops. Build a balanced squad by rarity, type, and
-        stat profile.
+        {{ 'home.step2.body' | t }}
       </p>
     </article>
 
     <article class="panel-pokedex p-6">
-      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">Step 3</p>
-      <h2 class="mt-2 text-lg font-black text-slate-900">Compete for Elite Status</h2>
+      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">{{ 'Step 3' | t }}</p>
+      <h2 class="mt-2 text-lg font-black text-slate-900">{{ 'home.step3.title' | t }}</h2>
       <p class="mt-2 text-sm leading-relaxed text-slate-700">
-        Enter ranked battles, earn rewards, and push your rating. Improve your club each cycle with
-        strategic upgrades.
+        {{ 'home.step3.body' | t }}
       </p>
     </article>
   </div>

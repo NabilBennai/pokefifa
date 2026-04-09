@@ -130,7 +130,9 @@ export class CreaturesService {
 
     for (const moveId of uniqueMoveIds) {
       if (!learnableMoveIds.has(moveId)) {
-        throw new BadRequestException('One or more selected moves are not learnable by this creature.');
+        throw new BadRequestException(
+          'One or more selected moves are not learnable by this creature.',
+        );
       }
     }
 

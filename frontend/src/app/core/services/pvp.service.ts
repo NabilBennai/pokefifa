@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { ReplaySubject, Subject } from 'rxjs';
+import { LanguageService } from '../i18n/language.service';
 import {
   PvpBattleState,
   PvpMatchFoundEvent,
@@ -16,6 +17,7 @@ import { API_BASE_URL } from '../tokens/api-base-url.token';
 @Injectable({ providedIn: 'root' })
 export class PvpService {
   private readonly apiBaseUrl = inject(API_BASE_URL);
+  private readonly languageService = inject(LanguageService);
   private socket: Socket | null = null;
 
   private readonly queueReadySubject = new ReplaySubject<PvpQueueReadyEvent>(1);
@@ -52,6 +54,7 @@ export class PvpService {
       transports: ['websocket'],
       auth: {
         token: accessToken,
+        locale: this.languageService.locale(),
       },
       withCredentials: true,
     });

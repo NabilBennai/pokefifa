@@ -7,4 +7,3 @@ export class UpdateCreatureMovesDto {
   @IsString({ each: true })
   moveIds!: string[];
 }
-

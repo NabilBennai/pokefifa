@@ -2,17 +2,21 @@ import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { finalize, firstValueFrom } from 'rxjs';
+import { LanguageService } from '../../core/i18n/language.service';
 import { OpenPackResponse, PackHistoryItem, UserPackListItem } from '../../core/models/pack.models';
 import { PacksService } from '../../core/services/packs.service';
 import { PokemonCardComponent } from '../../shared/components/pokemon-card/pokemon-card.component';
+import { L10nPipe } from '../../shared/pipes/l10n.pipe';
+import { TranslatePipe } from '../../shared/pipes/t.pipe';
 
 @Component({
   selector: 'app-packs-page',
-  imports: [DatePipe, PokemonCardComponent],
+  imports: [DatePipe, PokemonCardComponent, TranslatePipe, L10nPipe],
   templateUrl: './packs.page.html',
 })
 export class PacksPageComponent {
   private readonly packsService = inject(PacksService);
+  private readonly languageService = inject(LanguageService);
 
   protected readonly loadingPacks = signal(false);
   protected readonly loadingHistory = signal(false);
@@ -65,7 +69,11 @@ export class PacksPageComponent {
       return;
     }
 
-    this.openingModalTitle.set(pack?.packDefinition.name ?? 'Opening pack...');
+    const fallbackTitle = this.languageService.t('packs.openingInList');
+    const packName = pack
+      ? this.localized('pack', pack.packDefinition.slug, pack.packDefinition.name)
+      : fallbackTitle;
+    this.openingModalTitle.set(packName);
     this.openingModalRevealed.set(false);
     this.openingModalOpen.set(true);
     this.openingPackId.set(packId);
@@ -96,5 +104,11 @@ export class PacksPageComponent {
     } finally {
       this.openingPackId.set(null);
     }
+  }
+
+  private localized(prefix: string, slug: string, fallback: string): string {
+    const key = `${prefix}.${slug.trim().toLowerCase().replace(/_/g, '-').replace(/\s+/g, '-')}`;
+    const translated = this.languageService.t(key);
+    return translated === key ? fallback : translated;
   }
 }

@@ -1075,10 +1075,7 @@ export class BattlesService {
     const attackStat = this.getEffectiveStat(attacker, 'attack');
     const defenseStat = this.getEffectiveStat(target, 'defense');
     const base =
-      (((2 * attacker.level) / 5 + 2) *
-        move.power *
-        (attackStat / Math.max(1, defenseStat))) /
-        50 +
+      (((2 * attacker.level) / 5 + 2) * move.power * (attackStat / Math.max(1, defenseStat))) / 50 +
       2;
     const damage = Math.max(1, Math.floor(base * stab * effectiveness * randomFactor));
 
@@ -1113,7 +1110,12 @@ export class BattlesService {
       return this.applyStageChange(attacker, 'speed', 2, `${attacker.name}'s Speed rose sharply.`);
     }
     if (['swords-dance'].includes(key)) {
-      return this.applyStageChange(attacker, 'attack', 2, `${attacker.name}'s Attack rose sharply.`);
+      return this.applyStageChange(
+        attacker,
+        'attack',
+        2,
+        `${attacker.name}'s Attack rose sharply.`,
+      );
     }
     if (['harden', 'withdraw', 'defense-curl'].includes(key)) {
       return this.applyStageChange(attacker, 'defense', 1, `${attacker.name}'s Defense rose.`);
@@ -1135,17 +1137,17 @@ export class BattlesService {
     return 'But nothing happened.';
   }
 
-  private applySecondaryStatus(attacker: Combatant, target: Combatant, move: CombatMove): string | null {
+  private applySecondaryStatus(
+    attacker: Combatant,
+    target: Combatant,
+    move: CombatMove,
+  ): string | null {
     if (target.statusCondition) {
       return null;
     }
     const key = (move.slug || move.name).toLowerCase().replace(/\s+/g, '-');
     const burnChance =
-      key === 'fire-blast'
-        ? 0.3
-        : ['ember', 'flamethrower', 'fire-punch'].includes(key)
-          ? 0.1
-          : 0;
+      key === 'fire-blast' ? 0.3 : ['ember', 'flamethrower', 'fire-punch'].includes(key) ? 0.1 : 0;
     if (burnChance > 0 && Math.random() < burnChance) {
       target.statusCondition = 'BURN';
       return `${target.name} was burned.`;
@@ -1206,8 +1208,13 @@ export class BattlesService {
     return successMessage;
   }
 
-  private modifyStage(combatant: Combatant, stat: 'attack' | 'defense' | 'speed', delta: number): boolean {
-    const key = stat === 'attack' ? 'attackStage' : stat === 'defense' ? 'defenseStage' : 'speedStage';
+  private modifyStage(
+    combatant: Combatant,
+    stat: 'attack' | 'defense' | 'speed',
+    delta: number,
+  ): boolean {
+    const key =
+      stat === 'attack' ? 'attackStage' : stat === 'defense' ? 'defenseStage' : 'speedStage';
     const current = combatant[key];
     const next = Math.max(-6, Math.min(6, current + delta));
     if (next === current) {
@@ -1225,8 +1232,18 @@ export class BattlesService {
   }
 
   private getEffectiveStat(combatant: Combatant, stat: 'attack' | 'defense' | 'speed'): number {
-    const base = stat === 'attack' ? combatant.attack : stat === 'defense' ? combatant.defense : combatant.speed;
-    const stage = stat === 'attack' ? combatant.attackStage : stat === 'defense' ? combatant.defenseStage : combatant.speedStage;
+    const base =
+      stat === 'attack'
+        ? combatant.attack
+        : stat === 'defense'
+          ? combatant.defense
+          : combatant.speed;
+    const stage =
+      stat === 'attack'
+        ? combatant.attackStage
+        : stat === 'defense'
+          ? combatant.defenseStage
+          : combatant.speedStage;
     const burnPenalty = stat === 'attack' && combatant.statusCondition === 'BURN' ? 0.75 : 1;
     return Math.max(1, Math.floor(base * this.getStageMultiplier(stage) * burnPenalty));
   }

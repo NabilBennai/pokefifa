@@ -1,14 +1,27 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  OnDestroy,
+  Output,
+  SimpleChanges,
+  inject,
+} from '@angular/core';
 import { LiveBattleState } from '../../../core/models/battle.models';
+import { LanguageService } from '../../../core/i18n/language.service';
 import { PvpBattleState } from '../../../core/models/pvp.models';
+import { L10nPipe } from '../../pipes/l10n.pipe';
+import { TranslatePipe } from '../../pipes/t.pipe';
 
 @Component({
   selector: 'app-battle-live-modal',
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe, L10nPipe],
   templateUrl: './battle-live-modal.component.html',
 })
 export class BattleLiveModalComponent implements OnChanges, OnDestroy {
+  private readonly languageService = inject(LanguageService);
   @Input() open = false;
   @Input() battle: LiveBattleState | PvpBattleState | null = null;
   @Input() pending = false;
@@ -121,6 +134,12 @@ export class BattleLiveModalComponent implements OnChanges, OnDestroy {
 
   protected recentLogLines(log: string[]): string[] {
     return log.slice(-8);
+  }
+
+  protected moveName(slug: string, fallback: string): string {
+    const key = `move.${slug}`;
+    const translated = this.languageService.t(key);
+    return translated === key ? fallback : translated;
   }
 
   private refreshTurnCountdown(): void {

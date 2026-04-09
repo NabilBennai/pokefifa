@@ -8,4 +8,3 @@ import { PvpGateway } from './pvp.gateway';
   providers: [PvpGateway],
 })
 export class PvpModule {}
-

@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { BattlesModule } from './battles/battles.module';
 import { CreaturesModule } from './creatures/creatures.module';
 import { InventoryModule } from './inventory/inventory.module';
+import { I18nModule } from './i18n/i18n.module';
 import { MailModule } from './mail/mail.module';
 import { PacksModule } from './packs/packs.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -18,6 +19,7 @@ import { TeamsModule } from './teams/teams.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    I18nModule,
     MailModule,
     AuthModule,
     PacksModule,

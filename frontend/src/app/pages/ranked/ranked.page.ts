@@ -13,10 +13,11 @@ import { PvpService } from '../../core/services/pvp.service';
 import { RankedService } from '../../core/services/ranked.service';
 import { TeamsService } from '../../core/services/teams.service';
 import { BattleLiveModalComponent } from '../../shared/components/battle-live-modal/battle-live-modal.component';
+import { TranslatePipe } from '../../shared/pipes/t.pipe';
 
 @Component({
   selector: 'app-ranked-page',
-  imports: [DatePipe, BattleLiveModalComponent],
+  imports: [DatePipe, BattleLiveModalComponent, TranslatePipe],
   templateUrl: './ranked.page.html',
 })
 export class RankedPageComponent implements OnDestroy {
@@ -345,7 +346,7 @@ export class RankedPageComponent implements OnDestroy {
           );
           this.authService.refreshProfile().subscribe();
           this.loadData();
-        this.queueConnected.set(false);
+          this.queueConnected.set(false);
           this.scheduleLiveClose(1500);
         }
       }),

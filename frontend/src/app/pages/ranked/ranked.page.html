@@ -1,9 +1,11 @@
 <section class="space-y-6">
   <div class="panel-pokedex arena-shell p-8">
-    <p class="text-xs font-bold uppercase tracking-[0.14em] text-red-700">Ranked</p>
-    <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900">Divisions and Seasons</h1>
+    <p class="text-xs font-bold uppercase tracking-[0.14em] text-red-700">
+      {{ 'ranked.kicker' | t }}
+    </p>
+    <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900">{{ 'ranked.title' | t }}</h1>
     <p class="mt-2 text-sm text-slate-600">
-      Push your rating, secure your division, and claim end-of-season rewards.
+      {{ 'Push your rating, secure your division, and claim end-of-season rewards.' | t }}
     </p>
   </div>
 
@@ -23,22 +25,28 @@
   @if (overview(); as data) {
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <article class="stat-tile">
-        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Rating</p>
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">
+          {{ 'dashboard.rating' | t }}
+        </p>
         <p class="mt-1 text-2xl font-black text-slate-900">{{ data.ladder.rating }}</p>
       </article>
       <article class="stat-tile">
-        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Division</p>
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">{{ 'Division' | t }}</p>
         <p class="mt-1 text-2xl font-black text-slate-900">{{ data.ladder.division.label }}</p>
       </article>
       <article class="stat-tile">
-        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Season</p>
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">{{ 'Season' | t }}</p>
         <p class="mt-1 text-xl font-black text-slate-900">{{ data.season.id }}</p>
-        <p class="mt-1 text-xs text-slate-500">Ends {{ data.season.endsAt | date: 'short' }}</p>
+        <p class="mt-1 text-xs text-slate-500">
+          {{ 'Ends' | t }} {{ data.season.endsAt | date: 'short' }}
+        </p>
       </article>
       <article class="stat-tile">
-        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Next Division</p>
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">
+          {{ 'Next Division' | t }}
+        </p>
         <p class="mt-1 text-xl font-black text-slate-900">
-          {{ data.ladder.nextDivision?.label || 'Top Tier' }}
+          {{ data.ladder.nextDivision?.label || ('Top Tier' | t) }}
         </p>
       </article>
     </div>
@@ -46,7 +54,9 @@
     <article class="panel-pokedex p-6">
       <div class="flex flex-wrap items-end gap-3">
         <div class="min-w-56">
-          <label class="text-xs font-bold uppercase tracking-wide text-slate-500">Team</label>
+          <label class="text-xs font-bold uppercase tracking-wide text-slate-500">{{
+            'common.team' | t
+          }}</label>
           <select
             class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
             [value]="selectedTeamId() ?? ''"
@@ -64,18 +74,22 @@
           (click)="playRanked()"
         >
           @if (battling()) {
-            Queueing...
+            {{ 'Queueing...' | t }}
           } @else {
-            Play Ranked
+            {{ 'Play Ranked' | t }}
           }
         </button>
-        <button type="button" class="btn-poke-soft px-4 py-2" (click)="loadData()">Refresh</button>
+        <button type="button" class="btn-poke-soft px-4 py-2" (click)="loadData()">
+          {{ 'common.refresh' | t }}
+        </button>
       </div>
 
       <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-        <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">Online Queue (Beta)</p>
+        <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">
+          {{ 'ranked.onlineQueue' | t }}
+        </p>
         <p class="mt-2 text-sm text-slate-700">
-          Join matchmaking to find another online player near your rating.
+          {{ 'Join matchmaking to find another online player near your rating.' | t }}
         </p>
         <div class="mt-3 flex flex-wrap gap-2">
           <button
@@ -84,7 +98,11 @@
             [disabled]="queueSearching()"
             (click)="joinPvpQueue()"
           >
-            @if (queueSearching()) { Searching... } @else { Join PvP Queue }
+            @if (queueSearching()) {
+              {{ 'Searching...' | t }}
+            } @else {
+              {{ 'Join PvP Queue' | t }}
+            }
           </button>
           <button
             type="button"
@@ -92,7 +110,7 @@
             [disabled]="!queueConnected()"
             (click)="leavePvpQueue()"
           >
-            Leave Queue
+            {{ 'Leave Queue' | t }}
           </button>
         </div>
         @if (queueInfo()) {
@@ -106,7 +124,7 @@
       @if (liveBattle()) {
         <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
           <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">
-            Live Ranked Session
+            {{ 'Live Ranked Session' | t }}
           </p>
           <p class="mt-2 text-sm text-slate-700">Battle #{{ liveBattle()!.battleId }}</p>
           <button
@@ -114,18 +132,19 @@
             class="btn-poke-soft mt-3 px-3 py-2 text-xs"
             (click)="liveOpen.set(true)"
           >
-            Open Ranked Battle
+            {{ 'Open Ranked Battle' | t }}
           </button>
         </div>
       }
     </article>
 
     <article class="panel-pokedex p-6">
-      <h2 class="text-xl font-bold text-slate-900">Season Rewards</h2>
+      <h2 class="text-xl font-bold text-slate-900">{{ 'ranked.seasonRewards' | t }}</h2>
       <p class="mt-2 text-sm text-slate-600">
-        Preview for {{ data.ladder.division.label }}: {{ data.reward.preview.coins }} coins,
-        {{ data.reward.preview.gems }} gems, {{ data.reward.preview.shards }} shards,
-        {{ data.reward.preview.packs }} packs.
+        {{ 'Preview for' | t }} {{ data.ladder.division.label }}: {{ data.reward.preview.coins }}
+        {{ 'coins' | t }}, {{ data.reward.preview.gems }} {{ 'gems' | t }},
+        {{ data.reward.preview.shards }} {{ 'shards' | t }}, {{ data.reward.preview.packs }}
+        {{ 'packs' | t }}.
       </p>
 
       <div class="mt-4">
@@ -136,25 +155,25 @@
           (click)="claimSeasonReward()"
         >
           @if (claiming()) {
-            Claiming...
+            {{ 'Claiming...' | t }}
           } @else {
-            Claim Season Reward
+            {{ 'Claim Season Reward' | t }}
           }
         </button>
         @if (data.reward.alreadyClaimed) {
           <p class="mt-2 text-xs font-semibold text-emerald-700">
-            Reward already claimed for this season.
+            {{ 'Reward already claimed for this season.' | t }}
           </p>
         }
         @if (!data.season.hasEnded) {
           <p class="mt-2 text-xs font-semibold text-slate-600">
-            Season still active, reward claim opens at season end.
+            {{ 'Season still active, reward claim opens at season end.' | t }}
           </p>
         }
       </div>
     </article>
   } @else if (loading()) {
-    <p class="text-sm text-slate-500">Loading ranked overview...</p>
+    <p class="text-sm text-slate-500">{{ 'ranked.loading' | t }}</p>
   }
 </section>
 

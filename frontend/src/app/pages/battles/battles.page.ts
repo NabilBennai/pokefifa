@@ -8,10 +8,11 @@ import { AuthService } from '../../core/services/auth.service';
 import { BattlesService } from '../../core/services/battles.service';
 import { TeamsService } from '../../core/services/teams.service';
 import { BattleLiveModalComponent } from '../../shared/components/battle-live-modal/battle-live-modal.component';
+import { TranslatePipe } from '../../shared/pipes/t.pipe';
 
 @Component({
   selector: 'app-battles-page',
-  imports: [DatePipe, BattleLiveModalComponent],
+  imports: [DatePipe, BattleLiveModalComponent, TranslatePipe],
   templateUrl: './battles.page.html',
 })
 export class BattlesPageComponent {

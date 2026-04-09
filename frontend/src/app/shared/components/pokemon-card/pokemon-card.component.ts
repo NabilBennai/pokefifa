@@ -1,6 +1,8 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { MyCreatureItem } from '../../../core/models/creature.models';
 import { PackOpenReward } from '../../../core/models/pack.models';
+import { L10nPipe } from '../../pipes/l10n.pipe';
+import { TranslatePipe } from '../../pipes/t.pipe';
 
 type PokemonCardSpecies =
   | NonNullable<MyCreatureItem['species']>
@@ -8,6 +10,7 @@ type PokemonCardSpecies =
 
 @Component({
   selector: 'app-pokemon-card',
+  imports: [TranslatePipe, L10nPipe],
   templateUrl: './pokemon-card.component.html',
 })
 export class PokemonCardComponent {

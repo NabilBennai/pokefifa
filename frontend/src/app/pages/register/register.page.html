@@ -2,18 +2,20 @@
   <div class="panel-pokedex p-7 sm:p-8">
     <div class="flex items-center gap-2">
       <span class="pokeball-dot"></span>
-      <p class="text-xs font-bold uppercase tracking-[0.14em] text-red-700">Club Onboarding</p>
+      <p class="text-xs font-bold uppercase tracking-[0.14em] text-red-700">
+        {{ 'auth.register.kicker' | t }}
+      </p>
     </div>
-    <h1 class="mt-2 text-2xl font-black tracking-tight text-slate-900">Create Your Club</h1>
-    <p class="mt-2 text-sm text-slate-600">
-      Start with starter packs, build your first roster, and enter competitive play.
-    </p>
+    <h1 class="mt-2 text-2xl font-black tracking-tight text-slate-900">
+      {{ 'auth.register.title' | t }}
+    </h1>
+    <p class="mt-2 text-sm text-slate-600">{{ 'auth.register.subtitle' | t }}</p>
 
     <form class="mt-6 space-y-4" [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <div>
-        <label for="username" class="mb-1 block text-sm font-semibold text-slate-700"
-          >Username</label
-        >
+        <label for="username" class="mb-1 block text-sm font-semibold text-slate-700">{{
+          'auth.username' | t
+        }}</label>
         <input
           id="username"
           type="text"
@@ -23,39 +25,41 @@
           placeholder="yourtrainername"
         />
         @if (form.controls.username.touched && form.controls.username.invalid) {
-          <p class="mt-1 text-xs text-red-600">Username must be 3 to 30 characters long.</p>
+          <p class="mt-1 text-xs text-red-600">{{ 'auth.usernameRange' | t }}</p>
         }
       </div>
 
       <div>
-        <label for="email" class="mb-1 block text-sm font-semibold text-slate-700">Email</label>
+        <label for="email" class="mb-1 block text-sm font-semibold text-slate-700">{{
+          'auth.email' | t
+        }}</label>
         <input
           id="email"
           type="email"
           formControlName="email"
           autocomplete="email"
           class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100"
-          placeholder="trainer@pokefifa.gg"
+          [placeholder]="'auth.placeholder.email' | t"
         />
         @if (form.controls.email.touched && form.controls.email.invalid) {
-          <p class="mt-1 text-xs text-red-600">Please enter a valid email address.</p>
+          <p class="mt-1 text-xs text-red-600">{{ 'auth.invalidEmail' | t }}</p>
         }
       </div>
 
       <div>
-        <label for="password" class="mb-1 block text-sm font-semibold text-slate-700"
-          >Password</label
-        >
+        <label for="password" class="mb-1 block text-sm font-semibold text-slate-700">{{
+          'auth.password' | t
+        }}</label>
         <input
           id="password"
           type="password"
           formControlName="password"
           autocomplete="new-password"
           class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100"
-          placeholder="At least 8 characters"
+          [placeholder]="'auth.placeholder.passwordMin' | t"
         />
         @if (form.controls.password.touched && form.controls.password.invalid) {
-          <p class="mt-1 text-xs text-red-600">Password must be between 8 and 72 characters.</p>
+          <p class="mt-1 text-xs text-red-600">{{ 'auth.passwordRange' | t }}</p>
         }
       </div>
 
@@ -71,16 +75,18 @@
         class="btn-poke w-full disabled:cursor-not-allowed disabled:opacity-60"
       >
         @if (submitting()) {
-          Creating account...
+          {{ 'auth.creatingAccount' | t }}
         } @else {
-          Register
+          {{ 'nav.register' | t }}
         }
       </button>
     </form>
 
     <p class="mt-5 text-sm text-slate-600">
-      Already have an account?
-      <a routerLink="/login" class="font-bold text-red-700 hover:text-red-800">Sign in</a>
+      {{ 'auth.alreadyHaveAccount' | t }}
+      <a routerLink="/login" class="font-bold text-red-700 hover:text-red-800">{{
+        'auth.signIn' | t
+      }}</a>
     </p>
   </div>
 </section>

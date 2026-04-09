@@ -5,9 +5,12 @@ import {
   InventoryOverviewResponse,
 } from '../../core/models/inventory.models';
 import { InventoryService } from '../../core/services/inventory.service';
+import { L10nPipe } from '../../shared/pipes/l10n.pipe';
+import { TranslatePipe } from '../../shared/pipes/t.pipe';
 
 @Component({
   selector: 'app-inventory-page',
+  imports: [TranslatePipe, L10nPipe],
   templateUrl: './inventory.page.html',
 })
 export class InventoryPageComponent {

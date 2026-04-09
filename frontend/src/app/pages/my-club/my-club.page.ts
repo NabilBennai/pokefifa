@@ -2,16 +2,20 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 import { MyCreatureItem } from '../../core/models/creature.models';
+import { LanguageService } from '../../core/i18n/language.service';
 import { CreaturesService } from '../../core/services/creatures.service';
 import { PokemonCardComponent } from '../../shared/components/pokemon-card/pokemon-card.component';
+import { L10nPipe } from '../../shared/pipes/l10n.pipe';
+import { TranslatePipe } from '../../shared/pipes/t.pipe';
 
 @Component({
   selector: 'app-my-club-page',
-  imports: [PokemonCardComponent],
+  imports: [PokemonCardComponent, TranslatePipe, L10nPipe],
   templateUrl: './my-club.page.html',
 })
 export class MyClubPageComponent {
   private readonly creaturesService = inject(CreaturesService);
+  private readonly languageService = inject(LanguageService);
 
   protected readonly loadingCreatures = signal(false);
   protected readonly creaturesError = signal<string | null>(null);
@@ -148,6 +152,20 @@ export class MyClubPageComponent {
   }
 
   protected currentMoveName(creature: MyCreatureItem, slot: number): string {
-    return creature.learnedMoves.find((entry) => entry.slot === slot)?.move.name ?? '-';
+    const move = creature.learnedMoves.find((entry) => entry.slot === slot)?.move;
+    if (!move) {
+      return '-';
+    }
+    return this.translateMoveName(move.slug, move.name);
+  }
+
+  protected moveName(slug: string, fallback: string): string {
+    return this.translateMoveName(slug, fallback);
+  }
+
+  private translateMoveName(slug: string, fallback: string): string {
+    const key = `move.${slug}`;
+    const translated = this.languageService.t(key);
+    return translated === key ? fallback : translated;
   }
 }

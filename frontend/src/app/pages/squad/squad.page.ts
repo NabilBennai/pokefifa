@@ -5,9 +5,12 @@ import { MyCreatureItem } from '../../core/models/creature.models';
 import { Team } from '../../core/models/team.models';
 import { CreaturesService } from '../../core/services/creatures.service';
 import { TeamsService } from '../../core/services/teams.service';
+import { L10nPipe } from '../../shared/pipes/l10n.pipe';
+import { TranslatePipe } from '../../shared/pipes/t.pipe';
 
 @Component({
   selector: 'app-squad-page',
+  imports: [TranslatePipe, L10nPipe],
   templateUrl: './squad.page.html',
 })
 export class SquadPageComponent {
