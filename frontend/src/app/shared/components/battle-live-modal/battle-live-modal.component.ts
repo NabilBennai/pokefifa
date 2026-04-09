@@ -96,6 +96,33 @@ export class BattleLiveModalComponent implements OnChanges, OnDestroy {
     this.rematchRequested.emit();
   }
 
+  protected finalResult(battle: LiveBattleState | PvpBattleState): 'WIN' | 'LOSS' | 'DRAW' {
+    if (battle.result) {
+      return battle.result;
+    }
+    if (battle.winnerSide === 'A') {
+      return 'WIN';
+    }
+    if (battle.winnerSide === 'B') {
+      return 'LOSS';
+    }
+    return 'DRAW';
+  }
+
+  protected resultBadgeClass(result: 'WIN' | 'LOSS' | 'DRAW'): string {
+    if (result === 'WIN') {
+      return 'border-emerald-300 bg-emerald-50 text-emerald-700';
+    }
+    if (result === 'LOSS') {
+      return 'border-red-300 bg-red-50 text-red-700';
+    }
+    return 'border-amber-300 bg-amber-50 text-amber-700';
+  }
+
+  protected recentLogLines(log: string[]): string[] {
+    return log.slice(-8);
+  }
+
   private refreshTurnCountdown(): void {
     this.stopTurnCountdown();
     if (!this.isPvpBattle(this.battle) || this.battle.finished || !this.battle.turnExpiresAt) {
