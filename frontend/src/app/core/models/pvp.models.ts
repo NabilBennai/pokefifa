@@ -8,6 +8,14 @@ export type PvpQueueLeftEvent = {
   queueSize: number;
 };
 
+export type PvpQueueStatusEvent = {
+  inQueue: boolean;
+  joinedAt: number | null;
+  teamId: string | null;
+  queueSize: number;
+  matchId: string | null;
+};
+
 export type PvpQueueReadyEvent = {
   userId: string;
   username: string;

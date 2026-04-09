@@ -47,6 +47,7 @@ export class RankedPageComponent implements OnDestroy {
 
   constructor() {
     this.bindPvpEvents();
+    void this.bootstrapPvpSession();
     this.loadData();
   }
 
@@ -256,6 +257,31 @@ export class RankedPageComponent implements OnDestroy {
       this.queueConnected.set(false);
       this.queueSearching.set(false);
       this.queueError.set('Could not connect to PvP queue.');
+    }
+  }
+
+  private async bootstrapPvpSession(): Promise<void> {
+    const accessToken = this.authService.getAccessToken();
+    if (!accessToken) {
+      return;
+    }
+
+    try {
+      await this.pvpService.connect(accessToken);
+      this.queueConnected.set(true);
+
+      const status = await this.pvpService.getQueueStatus();
+      if (status.inQueue) {
+        this.queueSearching.set(true);
+        this.queueInfo.set(`Still searching... (${status.queueSize} player(s) in queue)`);
+      }
+      if (status.matchId) {
+        this.queueSearching.set(false);
+        this.queueInfo.set('Rejoining active PvP match...');
+        this.pvpService.joinMatch(status.matchId);
+      }
+    } catch {
+      this.queueConnected.set(false);
     }
   }
 

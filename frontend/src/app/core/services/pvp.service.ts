@@ -9,6 +9,7 @@ import {
   PvpQueueJoinedEvent,
   PvpQueueLeftEvent,
   PvpQueueReadyEvent,
+  PvpQueueStatusEvent,
 } from '../models/pvp.models';
 import { API_BASE_URL } from '../tokens/api-base-url.token';
 
@@ -89,6 +90,27 @@ export class PvpService {
       return;
     }
     this.socket.emit('queue:leave');
+  }
+
+  async getQueueStatus(): Promise<PvpQueueStatusEvent> {
+    if (!this.socket?.connected) {
+      throw new Error('PvP socket is not connected.');
+    }
+
+    return await new Promise<PvpQueueStatusEvent>((resolve, reject) => {
+      this.socket?.emit('queue:status', (response: unknown) => {
+        if (
+          !response ||
+          typeof response !== 'object' ||
+          !('inQueue' in response) ||
+          !('queueSize' in response)
+        ) {
+          reject(new Error('Invalid queue status response.'));
+          return;
+        }
+        resolve(response as PvpQueueStatusEvent);
+      });
+    });
   }
 
   joinMatch(matchId: string): void {
