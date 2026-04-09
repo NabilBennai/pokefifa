@@ -82,6 +82,7 @@ type PvpMatch = {
   turnSide: 'A' | 'B';
   status: 'IN_PROGRESS' | 'FINISHED';
   winner: 'A' | 'B' | 'DRAW' | null;
+  turnExpiresAt: number | null;
   participantA: MatchParticipant;
   participantB: MatchParticipant;
   log: string[];
@@ -162,6 +163,8 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly matches = new Map<string, PvpMatch>();
   private readonly userToMatch = new Map<string, string>();
   private readonly disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly turnTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private static readonly TURN_TIMEOUT_MS = 25_000;
 
   constructor(
     private readonly jwtService: JwtService,
@@ -491,8 +494,12 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
         await this.finalizeMatch(match);
       }
 
+      if (match.status === 'IN_PROGRESS') {
+        this.scheduleTurnTimer(match);
+      }
       this.emitState(match);
       if (match.status === 'FINISHED') {
+        this.clearTurnTimer(match.id);
         const timerA = this.disconnectTimers.get(match.participantA.userId);
         if (timerA) {
           clearTimeout(timerA);
@@ -635,6 +642,7 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
       turnSide: Math.random() < 0.5 ? 'A' : 'B',
       status: 'IN_PROGRESS',
       winner: null,
+      turnExpiresAt: Date.now() + PvpGateway.TURN_TIMEOUT_MS,
       participantA: {
         socketId: a.socketId,
         userId: a.userId,
@@ -699,6 +707,7 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(a.socketId).emit('match:found', payloadA);
     this.server.to(b.socketId).emit('match:found', payloadB);
 
+    this.scheduleTurnTimer(match);
     this.emitState(match);
   }
 
@@ -957,6 +966,7 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
       queue: 'RANKED',
       status: match.status,
       turn: match.turn,
+      turnExpiresAt: match.turnExpiresAt,
       finished: match.status === 'FINISHED',
       mustPlayerSwitch: player.mustSwitch,
       winnerSide,
@@ -1027,6 +1037,64 @@ export class PvpGateway implements OnGatewayConnection, OnGatewayDisconnect {
     await this.finalizeMatch(match);
     this.emitState(match);
 
+    this.clearTurnTimer(match.id);
+    const timerA = this.disconnectTimers.get(match.participantA.userId);
+    if (timerA) {
+      clearTimeout(timerA);
+      this.disconnectTimers.delete(match.participantA.userId);
+    }
+    const timerB = this.disconnectTimers.get(match.participantB.userId);
+    if (timerB) {
+      clearTimeout(timerB);
+      this.disconnectTimers.delete(match.participantB.userId);
+    }
+    this.userToMatch.delete(match.participantA.userId);
+    this.userToMatch.delete(match.participantB.userId);
+    this.matches.delete(match.id);
+  }
+
+  private scheduleTurnTimer(match: PvpMatch): void {
+    this.clearTurnTimer(match.id);
+    if (match.status !== 'IN_PROGRESS') {
+      match.turnExpiresAt = null;
+      return;
+    }
+
+    match.turnExpiresAt = Date.now() + PvpGateway.TURN_TIMEOUT_MS;
+    const timer = setTimeout(() => {
+      void this.handleTurnTimeout(match.id);
+    }, PvpGateway.TURN_TIMEOUT_MS + 25);
+    this.turnTimers.set(match.id, timer);
+  }
+
+  private clearTurnTimer(matchId: string): void {
+    const timer = this.turnTimers.get(matchId);
+    if (!timer) {
+      return;
+    }
+    clearTimeout(timer);
+    this.turnTimers.delete(matchId);
+  }
+
+  private async handleTurnTimeout(matchId: string): Promise<void> {
+    const match = this.matches.get(matchId);
+    if (!match || match.status === 'FINISHED') {
+      return;
+    }
+
+    const loserSide = match.turnSide;
+    const loser = loserSide === 'A' ? match.participantA : match.participantB;
+    const winner = loserSide === 'A' ? 'B' : 'A';
+
+    match.status = 'FINISHED';
+    match.winner = winner;
+    match.turnExpiresAt = null;
+    match.log.push(`${loser.username} ran out of time. Forfeit.`);
+
+    await this.finalizeMatch(match);
+    this.emitState(match);
+
+    this.clearTurnTimer(match.id);
     const timerA = this.disconnectTimers.get(match.participantA.userId);
     if (timerA) {
       clearTimeout(timerA);

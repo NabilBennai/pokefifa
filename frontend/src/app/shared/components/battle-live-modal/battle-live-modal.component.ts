@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges } from '@angular/core';
 import { LiveBattleState } from '../../../core/models/battle.models';
 import { PvpBattleState } from '../../../core/models/pvp.models';
 
@@ -8,7 +8,7 @@ import { PvpBattleState } from '../../../core/models/pvp.models';
   imports: [CommonModule],
   templateUrl: './battle-live-modal.component.html',
 })
-export class BattleLiveModalComponent implements OnChanges {
+export class BattleLiveModalComponent implements OnChanges, OnDestroy {
   @Input() open = false;
   @Input() battle: LiveBattleState | PvpBattleState | null = null;
   @Input() pending = false;
@@ -17,6 +17,8 @@ export class BattleLiveModalComponent implements OnChanges {
   @Output() switchSelected = new EventEmitter<number>();
   @Output() rematchRequested = new EventEmitter<void>();
   protected showSwitchPicker = false;
+  protected turnSecondsRemaining: number | null = null;
+  private countdownTimer: ReturnType<typeof setInterval> | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['open'] && !this.open) {
@@ -25,6 +27,11 @@ export class BattleLiveModalComponent implements OnChanges {
     if (changes['battle'] && this.battle?.mustPlayerSwitch) {
       this.showSwitchPicker = true;
     }
+    this.refreshTurnCountdown();
+  }
+
+  ngOnDestroy(): void {
+    this.stopTurnCountdown();
   }
 
   protected hpClass(percent: number): string {
@@ -87,5 +94,37 @@ export class BattleLiveModalComponent implements OnChanges {
       return;
     }
     this.rematchRequested.emit();
+  }
+
+  private refreshTurnCountdown(): void {
+    this.stopTurnCountdown();
+    if (!this.isPvpBattle(this.battle) || this.battle.finished || !this.battle.turnExpiresAt) {
+      this.turnSecondsRemaining = null;
+      return;
+    }
+
+    const update = () => {
+      if (!this.isPvpBattle(this.battle) || !this.battle.turnExpiresAt) {
+        this.turnSecondsRemaining = null;
+        this.stopTurnCountdown();
+        return;
+      }
+      const msLeft = this.battle.turnExpiresAt - Date.now();
+      this.turnSecondsRemaining = Math.max(0, Math.ceil(msLeft / 1000));
+      if (this.turnSecondsRemaining <= 0) {
+        this.stopTurnCountdown();
+      }
+    };
+
+    update();
+    this.countdownTimer = setInterval(update, 500);
+  }
+
+  private stopTurnCountdown(): void {
+    if (!this.countdownTimer) {
+      return;
+    }
+    clearInterval(this.countdownTimer);
+    this.countdownTimer = null;
   }
 }

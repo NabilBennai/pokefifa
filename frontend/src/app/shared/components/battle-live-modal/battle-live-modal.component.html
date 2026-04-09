@@ -5,6 +5,13 @@
     <div class="fr-shell w-full max-w-3xl">
       <div class="fr-head">
         <p class="fr-title">Live Battle - Turn {{ battle.turn }}</p>
+        @if (isPvpBattle(battle) && turnSecondsRemaining !== null) {
+          <p
+            class="rounded-full border border-slate-300 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-700"
+          >
+            Timer {{ turnSecondsRemaining }}s
+          </p>
+        }
         @if (isPvpBattle(battle)) {
           <p
             class="rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em]"

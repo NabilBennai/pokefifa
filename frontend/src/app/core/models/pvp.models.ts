@@ -41,6 +41,7 @@ export type PvpBattleState = {
   queue: 'RANKED';
   status: 'IN_PROGRESS' | 'FINISHED';
   turn: number;
+  turnExpiresAt: number | null;
   finished: boolean;
   mustPlayerSwitch: boolean;
   winnerSide: 'A' | 'B' | 'DRAW' | null;
