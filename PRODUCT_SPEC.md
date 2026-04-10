@@ -1,295 +1,149 @@
-# Pokefifa Product Specification
+# PokeUT Product Specification
 
-## Vision
+## 1. Product Goal
 
-Pokefifa is a competitive creature-collection game where players build teams, compete in battles, and improve their squad through pack openings and progression systems.
+PokeUT is a competitive collection game with a fast, repeatable loop:
 
-The goal is to create a game that combines:
+1. Build a squad
+2. Fight battles
+3. Earn rewards
+4. Open packs
+5. Improve squad quality
+6. Push ranked progression
 
-* squad building
-* strategy
-* collecting
-* progression
+The product combines:
 
-while maintaining fast and competitive gameplay.
+- collection depth
+- tactical team building
+- short competitive sessions
+- long-term account progression
 
----
+## 2. Platforms and Architecture
 
-# Core Gameplay Loop
+- Frontend: Angular SPA
+- Backend: NestJS REST API + Socket.IO PvP gateway
+- Database: PostgreSQL via Prisma
+- Auth: JWT
+- Localization: EN / FR / ES
 
-1. Player builds a squad
-2. Player battles opponents
-3. Player earns coins and rewards
-4. Player opens packs
-5. Player improves team
-6. Player climbs ranked divisions
+## 3. Core Domain Model
 
----
+### Player
 
-# Core Systems
+- account identity: email, username
+- progression: level, xp, rating
+- currencies: coins, gems, shards
 
-## 1. Creatures
+### Creature
 
-Creatures represent the main collectible units.
+- species-driven stats and typing
+- rarity tiers: COMMON, RARE, EPIC, LEGENDARY, MYTHIC
+- owned instance supports level/xp and learned moves
 
-Attributes:
+### Team
 
-* id
-* name
-* type
-* rarity
-* hp
-* attack
-* defense
-* speed
-* ability
-* move slots
+- max 6 creatures
+- no duplicate owned creature instance in same team
+- one optional default team per player
 
-Rarity tiers:
+### Inventory and Packs
 
-* Common
-* Rare
-* Epic
-* Legendary
-* Mythic
+- inventory stores items and quantities
+- unopened packs can be purchased/claimed
+- opening a pack generates rewards and records reward history
 
----
+Default pack opening behavior (current config):
 
-## 2. Teams
+- `PACK_OPEN_CREATURE_REWARDS=5`
+- `PACK_OPEN_ITEM_REWARDS=1`
 
-Players create teams composed of **6 creatures**.
+## 4. Gameplay Systems
 
-Rules:
+### 4.1 Pack Economy
 
-* Maximum 6 creatures
-* One creature cannot appear twice in the same team
-* Team synergy bonuses may apply
+- pack purchase from store using COINS or GEMS (pack-dependent)
+- weighted drops for creatures and items
+- server-side transactional opening
+- frontend supports:
+  - open single pack
+  - open all unopened packs with one final aggregated result view
 
----
+### 4.2 PvE and Ranked (HTTP)
 
-## 3. Inventory
+- AI battle endpoint for quick progression
+- ranked battle endpoint for rating loop
+- battle history endpoint for recent logs/results
+- live ranked and live casual battle start/action endpoints
 
-Inventory stores player assets.
+### 4.3 Real-time Ranked PvP (WebSocket)
 
-Includes:
+Namespace: `/pvp`
 
-* creatures
-* items
-* TMs
-* evolution materials
-* currencies
+- queue join/leave/status
+- matchmaking by rating tolerance
+- live turn-based action stream
+- disconnect timeout and forfeit handling
+- rating and reward settlement at match end
 
----
+## 5. Ranked and Season System
 
-## 4. Packs
+- ranked overview endpoint returns division context and season state
+- season reward claim endpoint grants configured rewards once per season
+- admin season reset endpoint (`x-admin-key`) supports controlled resets
 
-Packs are purchased using coins.
+## 6. Security and Validation
 
-Example pack probabilities:
+- passwords hashed before storage
+- JWT guard protects player-specific resources
+- DTO validation with whitelist and forbidden unknown properties
+- CORS allowlist with optional Vercel preview-domain support
 
-Bronze Pack
+## 7. Non-Functional Requirements
 
-* 70% common creature
-* 25% rare
-* 5% epic
+### Performance
 
-Silver Pack
+- interactive APIs should remain responsive under normal gameplay load
+- pack opening and reward writes must remain atomic and consistent
 
-* 50% rare
-* 40% epic
-* 10% legendary
+### Reliability
 
-Elite Pack
+- transactional integrity for purchases and openings
+- deterministic guards for already-opened packs and insufficient balance
 
-* 60% epic
-* 30% legendary
-* 10% mythic
+### Scalability
 
----
+- split frontend/backend services
+- PostgreSQL-backed persistence and indexed lookup fields
+- PvP queue/match state structured for later externalization
 
-## 5. Economy
+## 8. MVP Scope (Implemented)
 
-Currencies:
+- authentication (register/login/me)
+- species listing
+- creature inventory and move editing
+- team creation and updates
+- store + purchases
+- pack opening + history + open-all UX
+- inventory overview
+- AI and ranked battle APIs
+- ranked season overview and claim
+- real-time ranked queue and PvP match flow
 
-Coins
-Earned from battles.
+## 9. Out of Scope (Current)
 
-Premium currency
-Optional paid currency.
+- direct player-to-player trading
+- guilds/clans
+- marketplace auction mechanics
+- tournament brackets
+- anti-cheat and advanced moderation tooling
 
-Shards
-Generated from duplicate creatures.
+## 10. Success Metrics
 
-Shards can be used to craft specific creatures.
+Track at minimum:
 
----
-
-# Battle System
-
-Simplified turn-based combat.
-
-Each turn:
-
-1. Players choose a move
-2. Speed determines turn order
-3. Damage calculated using stats and type modifiers
-
-Damage formula (simplified):
-
-```
-Damage = (Attack / Defense) × MovePower × TypeModifier
-```
-
-Battles end when all creatures on one team faint.
-
----
-
-# Ranked System
-
-Players compete in divisions.
-
-Example divisions:
-
-* Bronze
-* Silver
-* Gold
-* Diamond
-* Master
-
-Ranking determined by match wins.
-
-Season resets occur periodically.
-
----
-
-# User Stories
-
-## Authentication
-
-User Story 1
-As a new player
-I want to create an account
-So that my progress is saved.
-
-User Story 2
-As a player
-I want to log in securely
-So that my account remains protected.
-
----
-
-## Squad Building
-
-User Story 3
-As a player
-I want to build a team of creatures
-So that I can participate in battles.
-
-User Story 4
-As a player
-I want to edit my team
-So that I can optimize strategy.
-
----
-
-## Battles
-
-User Story 5
-As a player
-I want to challenge opponents
-So that I can test my team.
-
-User Story 6
-As a player
-I want to earn rewards from battles
-So that I can improve my team.
-
----
-
-## Packs
-
-User Story 7
-As a player
-I want to purchase packs
-So that I can obtain new creatures.
-
-User Story 8
-As a player
-I want random rewards from packs
-So that collecting feels exciting.
-
----
-
-## Inventory
-
-User Story 9
-As a player
-I want to view my inventory
-So that I know what assets I own.
-
-User Story 10
-As a player
-I want to apply items and TMs
-So that I can strengthen my creatures.
-
----
-
-# Non-Functional Requirements
-
-Performance
-
-* API response time < 200ms
-* Battle resolution < 1 second
-
-Scalability
-
-* Support thousands of concurrent users
-
-Security
-
-* JWT authentication
-* Password hashing
-* Rate limiting
-
-Reliability
-
-* Database backups
-* Transaction safety for pack openings
-
----
-
-# MVP Scope
-
-First version should include:
-
-* authentication
-* creature collection
-* team builder
-* basic battles
-* coins
-* pack opening
-* inventory
-
-Everything else can be added later.
-
----
-
-# Future Systems
-
-* creature evolutions
-* trading system
-* tournaments
-* seasonal rewards
-* guilds
-* marketplace
-
----
-
-# Success Metrics
-
-Measure success by:
-
-* daily active users
-* matches played
-* packs opened
-* retention rate
+- daily active players
+- battle sessions per active player
+- packs opened per active player
+- conversion from purchased pack to opened pack
+- 7-day and 30-day retention
+- ranked participation rate

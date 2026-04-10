@@ -1,339 +1,146 @@
-# Pokefifa
+# PokeUT
 
-Pokefifa is a competitive team-building game inspired by collectible squad modes such as Ultimate Team. Instead of football players, users build teams of Pokémon-like creatures, battle other teams, earn coins, and open packs containing creatures, items, and TMs.
+A full-stack competitive creature team-builder inspired by Ultimate Team loops.
 
-The project is designed as a modern full-stack web application using:
+Players collect creatures, build squads of 6, fight AI and ranked battles, open packs, and progress through seasonal rewards.
 
-* **PostgreSQL** – relational database
-* **NestJS** – backend API
-* **Angular** – frontend application
-* **Vercel** – deployment platform
+## Current Product Snapshot
 
----
+- Frontend: Angular 21 (standalone components, Tailwind v4, i18n EN/FR/ES)
+- Backend: NestJS 11 + Prisma + PostgreSQL
+- Auth: JWT (register, login, protected routes)
+- Pack flow: single open and "open all packs" UX
+- Pack rewards default: 5 creature rewards + 1 item reward per pack
+- Real-time PvP: Socket.IO namespace `/pvp` with ranked queue and live match state
+- CI: GitHub Actions monorepo workflow (`.github/workflows/ci.yml`)
 
-# Table of Contents
+## Monorepo Structure
 
-* Overview
-* Tech Stack
-* Architecture
-* Project Structure
-* Setup
-* Environment Variables
-* Database
-* Running Locally
-* Deployment
-* Game Concepts
-
----
-
-# Overview
-
-Pokefifa is a collection and strategy game where players:
-
-1. Build a squad of creatures
-2. Battle other squads
-3. Earn coins and rewards
-4. Open packs to obtain new creatures, TMs, and items
-5. Improve their team and climb ranked divisions
-
-Core features:
-
-* Team builder
-* Ranked battles
-* Pack opening system
-* Inventory management
-* Economy system
-* Progression and rewards
-
----
-
-# Tech Stack
-
-## Backend
-
-* NestJS
-* TypeScript
-* PostgreSQL
-* Prisma ORM (recommended)
-* JWT authentication
-
-## Frontend
-
-* Angular
-* TypeScript
-* RxJS
-* Angular Router
-* Angular Material or Tailwind
-
-## Infrastructure
-
-* Vercel hosting
-* PostgreSQL (Neon / Supabase / Railway recommended)
-* Redis (optional later for matchmaking and caching)
-
----
-
-# Architecture
-
-Client–server architecture.
-
-```
-Angular Frontend
-       │
-       │ REST / JSON API
-       ▼
-NestJS Backend
-       │
-       │ ORM
-       ▼
-PostgreSQL Database
-```
-
-Backend responsibilities:
-
-* Authentication
-* Game logic
-* Battle resolution
-* Pack generation
-* Economy rules
-* Database management
-
-Frontend responsibilities:
-
-* UI
-* Team builder
-* Pack opening animations
-* Battle interface
-* Inventory management
-
----
-
-# Project Structure
-
-```
+```text
 pokefifa/
-│
-├── backend/
-│   ├── src/
-│   │   ├── auth/
-│   │   ├── users/
-│   │   ├── creatures/
-│   │   ├── teams/
-│   │   ├── battles/
-│   │   ├── packs/
-│   │   ├── inventory/
-│   │   └── economy/
-│   │
-│   ├── prisma/
-│   │   └── schema.prisma
-│   │
-│   └── main.ts
-│
-├── frontend/
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── pages/
-│   │   │   ├── components/
-│   │   │   ├── services/
-│   │   │   └── models/
-│   │   │
-│   │   └── environments/
-│
-└── README.md
+  backend/      NestJS API, Prisma schema/migrations, server logic
+  frontend/     Angular app, pages/components/services, i18n JSON
+  .github/      CI workflow
+  docker-compose.dev.yml  Postgres + MailDev for local dev
 ```
 
----
+## Local Setup
 
-# Setup
+### Prerequisites
 
-## Requirements
+- Node.js 22+
+- npm 10+
+- Docker (recommended for local PostgreSQL and MailDev)
 
-* Node.js 18+
-* PostgreSQL
-* npm or pnpm
+### 1. Clone
 
----
-
-# Clone the Repository
-
-```
-git clone https://github.com/yourname/pokefifa
+```bash
+git clone <your-repo-url>
 cd pokefifa
 ```
 
----
+### 2. Start local infra
 
-# Backend Installation
-
+```bash
+docker compose -f docker-compose.dev.yml up -d
 ```
+
+This starts:
+
+- PostgreSQL on `localhost:5432`
+- MailDev SMTP on `localhost:1025`
+- MailDev UI on `http://localhost:1080`
+
+### 3. Configure backend env
+
+```bash
 cd backend
-npm install
+cp .env.example .env
 ```
 
-Run development server:
+Important defaults in `.env.example`:
 
-```
+- `DATABASE_URL=postgresql://pokefifa:pokefifa@localhost:5432/pokefifa`
+- `PACK_OPEN_CREATURE_REWARDS=5`
+- `PACK_OPEN_ITEM_REWARDS=1`
+
+### 4. Install and run backend
+
+```bash
+cd backend
+npm ci
+npm run prisma:migrate:deploy
 npm run start:dev
 ```
 
----
+Backend runs on `http://localhost:3000`.
 
-# Frontend Installation
+### 5. Install and run frontend
 
-```
+```bash
 cd frontend
-npm install
+npm ci
+npm run start
 ```
 
-Run Angular dev server:
+Frontend runs on `http://localhost:4200`.
 
-```
-ng serve
-```
+## Useful Scripts
 
-Application will be available at:
+### Backend (`backend/package.json`)
 
-```
-http://localhost:4200
-```
+- `npm run start:dev` - run API in watch mode
+- `npm run build` - production build
+- `npm run lint` - ESLint
+- `npm run test` - unit tests
+- `npm run test:e2e` - e2e tests
+- `npm run prisma:migrate:deploy` - apply migrations
 
----
+### Frontend (`frontend/package.json`)
 
-# Environment Variables
+- `npm run start` - Angular dev server
+- `npm run build` - production build
+- `npm run lint` - ESLint
+- `npm run test -- --watch=false` - unit tests
+- `npm run i18n:check` - checks locale key consistency and hardcoded text
 
-Create `.env` in the backend folder.
+## Gameplay Features Implemented
 
-Example:
+- Account creation and login
+- Creature collection and move-set editing
+- Team creation/update with validation (max 6, unique creatures)
+- Store purchase flow (coins/gems)
+- Pack opening history
+- Open one pack and open all packs flows
+- AI battles
+- Ranked battles (sync + live)
+- Ranked season overview and reward claim
+- Inventory overview (creatures, items, currencies, unopened packs)
 
-```
-DATABASE_URL=postgresql://user:password@localhost:5432/pokefifa
+## API and Contracts
 
-JWT_SECRET=supersecret
+- Full REST endpoint list: [`API_ROUTES.md`](./API_ROUTES.md)
+- Product-level rules and scope: [`PRODUCT_SPEC.md`](./PRODUCT_SPEC.md)
+- Delivery plan/status: [`MVP_ROADMAP.md`](./MVP_ROADMAP.md)
 
-PORT=3000
-```
+## CI
 
----
+The repository uses one CI workflow:
 
-# Database
+- File: `.github/workflows/ci.yml`
+- Trigger: pull requests + pushes to `main`
+- Behavior:
+  - Detects changed area (frontend/backend)
+  - Runs only relevant jobs
+  - Frontend: format check, lint, i18n check, tests, build
+  - Backend: PostgreSQL service, migrations, format check, lint, unit/e2e tests, build
 
-Using **PostgreSQL** with an ORM (Prisma recommended).
+## Deployment Notes
 
-Example main entities:
+- Frontend and backend include `vercel.json` configs.
+- No automated CD workflow is currently present in `.github/workflows`.
+- You can deploy manually using Vercel CLI or Vercel Git integration.
 
-* Users
-* Creatures
-* Teams
-* Inventory
-* Packs
-* Items
-* TMs
-* Battles
+## License
 
-Run migrations:
-
-```
-npx prisma migrate dev
-```
-
-Generate Prisma client:
-
-```
-npx prisma generate
-```
-
----
-
-# Deployment
-
-Recommended setup:
-
-Frontend:
-
-* Deploy Angular build to **Vercel**
-
-Backend:
-
-* Deploy NestJS API as serverless functions or on a Node hosting service.
-
-Database:
-
-* Neon
-* Supabase
-* Railway
-
----
-
-# Game Concepts
-
-## Squad System
-
-Players build a team of **6 creatures**.
-
-Each creature has:
-
-* Type
-* Stats
-* Moves
-* Ability
-* Item slot
-* Rarity
-
----
-
-## Packs
-
-Players can buy packs using coins earned in battles.
-
-Pack types:
-
-* Bronze Pack
-* Silver Pack
-* Elite Pack
-* Event Packs
-
-Each pack contains random rewards:
-
-* Creatures
-* TMs
-* Items
-* Currency
-
----
-
-## Battles
-
-Players fight using their team.
-
-Rewards include:
-
-* Coins
-* XP
-* Seasonal rewards
-
----
-
-## Economy
-
-Currency types:
-
-* Coins (earned)
-* Premium currency (optional)
-* Shards (from duplicates)
-
----
-
-# Future Features
-
-* Draft mode
-* Seasonal ladders
-* Special events
-* Creature evolutions
-* Guilds / clubs
-* Trading system
-
----
-
-# License
-
-This project is for educational and development purposes.
+This project is for educational and development use.
