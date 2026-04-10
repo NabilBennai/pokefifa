@@ -16,6 +16,7 @@ type Combatant = {
   name: string;
   slug: string;
   level: number;
+  expYield: number;
   primaryType: string;
   secondaryType: string | null;
   maxHp: number;
@@ -42,6 +43,24 @@ type SimulationResult = {
   remainingHpA: number;
   remainingHpB: number;
   ended: boolean;
+  usedIndexesA: number[];
+  defeatedOpponentsB: Array<{
+    name: string;
+    slug: string;
+    level: number;
+    expYield: number;
+  }>;
+};
+
+type CreatureBattleProgress = {
+  creatureId: string;
+  name: string;
+  slug: string;
+  levelBefore: number;
+  levelAfter: number;
+  xpBefore: number;
+  xpAfter: number;
+  xpGained: number;
 };
 
 type LiveBattleState = {
@@ -62,8 +81,10 @@ type LiveBattleState = {
     coins: number;
     xp: number;
   };
+  creatureProgression?: CreatureBattleProgress[];
   ratingDelta?: number;
   result?: BattleResult;
+  participantPlayerIndexes?: number[];
 };
 
 const MOVE_SELECT = {
@@ -82,6 +103,8 @@ const TEAM_SELECT = {
     select: {
       userCreature: {
         select: {
+          id: true,
+          xp: true,
           level: true,
           species: {
             select: {
@@ -233,6 +256,16 @@ export class BattlesService {
         },
       });
 
+      const participantCreatureIds = simulation.usedIndexesA
+        .map((index) => playerTeamData.slots[index]?.userCreature.id)
+        .filter((id): id is string => typeof id === 'string');
+      const creatureProgression = await this.applyFireRedCreatureExperience(tx, {
+        userId,
+        participantCreatureIds,
+        defeatedOpponents: simulation.defeatedOpponentsB,
+        trainerBattle: true,
+      });
+
       const createdBattle = await tx.battle.create({
         data: {
           mode: BattleMode.AI,
@@ -268,11 +301,11 @@ export class BattlesService {
         },
       });
 
-      return createdBattle;
+      return { createdBattle, creatureProgression };
     });
 
     return {
-      battleId: battle.id,
+      battleId: battle.createdBattle.id,
       result,
       rewards: {
         coins: coinsAwarded,
@@ -302,7 +335,8 @@ export class BattlesService {
       winnerSide: simulation.winner,
       turns: simulation.turns,
       battleLog: simulation.log,
-      createdAt: battle.createdAt,
+      createdAt: battle.createdBattle.createdAt,
+      creatureProgression: battle.creatureProgression,
     };
   }
 
@@ -353,6 +387,16 @@ export class BattlesService {
           level: levelAfter,
           rating: ratingAfter,
         },
+      });
+
+      const participantCreatureIds = simulation.usedIndexesA
+        .map((index) => playerTeamData.slots[index]?.userCreature.id)
+        .filter((id): id is string => typeof id === 'string');
+      const creatureProgression = await this.applyFireRedCreatureExperience(tx, {
+        userId,
+        participantCreatureIds,
+        defeatedOpponents: simulation.defeatedOpponentsB,
+        trainerBattle: true,
       });
 
       const createdBattle = await tx.battle.create({
@@ -407,6 +451,7 @@ export class BattlesService {
           ? { name: opponentTeam.combatants[0].name, slug: opponentTeam.combatants[0].slug }
           : null,
         simulation,
+        creatureProgression,
       };
     });
 
@@ -443,6 +488,7 @@ export class BattlesService {
       turns: battle.simulation.turns,
       battleLog: battle.simulation.log,
       createdAt: battle.createdBattle.createdAt,
+      creatureProgression: battle.creatureProgression,
     };
   }
 
@@ -529,6 +575,7 @@ export class BattlesService {
       activeOpponentIndex: 0,
       winner: null,
       opponentRating,
+      participantPlayerIndexes: [0],
     };
 
     const createdBattle = await this.prisma.battle.create({
@@ -590,6 +637,7 @@ export class BattlesService {
     }
 
     this.normalizeActiveIndexes(state);
+    this.markParticipantCreature(state, state.activePlayerIndex);
     const playerActive = state.playerTeam[state.activePlayerIndex];
     const opponentActive = state.opponentTeam[state.activeOpponentIndex];
 
@@ -619,11 +667,13 @@ export class BattlesService {
 
       if (state.mustPlayerSwitch) {
         state.activePlayerIndex = switchIndex;
+        this.markParticipantCreature(state, switchIndex);
         state.mustPlayerSwitch = false;
         state.log.push(`Go! ${incoming.name}!`);
       } else {
         state.log.push(`Turn ${state.turn}:`);
         state.activePlayerIndex = switchIndex;
+        this.markParticipantCreature(state, switchIndex);
         state.log.push(`Come back! Go! ${incoming.name}!`);
 
         const aiMove = this.pickMove(opponentActive.moves);
@@ -654,6 +704,7 @@ export class BattlesService {
       }
 
       const playerMove = playerActive.moves[moveIndex];
+      this.markParticipantCreature(state, state.activePlayerIndex);
       const aiMove = this.pickMove(opponentActive.moves);
       const playerSpeed = this.getEffectiveStat(playerActive, 'speed');
       const opponentSpeed = this.getEffectiveStat(opponentActive, 'speed');
@@ -817,6 +868,12 @@ export class BattlesService {
           species.baseAttack,
           species.baseDefense,
           species.baseSpeed,
+          this.baseExpYieldFromBaseStats(
+            species.baseHp,
+            species.baseAttack,
+            species.baseDefense,
+            species.baseSpeed,
+          ),
           moves,
         ),
       );
@@ -844,6 +901,12 @@ export class BattlesService {
         species.baseAttack,
         species.baseDefense,
         species.baseSpeed,
+        this.baseExpYieldFromBaseStats(
+          species.baseHp,
+          species.baseAttack,
+          species.baseDefense,
+          species.baseSpeed,
+        ),
         moves,
       );
     });
@@ -926,6 +989,7 @@ export class BattlesService {
     baseAttack: number,
     baseDefense: number,
     baseSpeed: number,
+    expYield: number,
     moves: CombatMove[],
   ): Combatant {
     const maxHp = this.calculateHp(baseHp, level);
@@ -933,6 +997,7 @@ export class BattlesService {
       name,
       slug,
       level,
+      expYield,
       primaryType: primaryType.toLowerCase(),
       secondaryType: secondaryType ? secondaryType.toLowerCase() : null,
       maxHp,
@@ -950,6 +1015,10 @@ export class BattlesService {
 
   private simulateBattle(teamA: CombatTeam, teamB: CombatTeam): SimulationResult {
     const log: string[] = [];
+    const usedIndexesA = new Set<number>();
+    const defeatedOpponentsB: Array<{ name: string; slug: string; level: number; expYield: number }> = [];
+    const defeatedOpponentRefs = new Set<Combatant>();
+    const opponentRefs = new Set(teamB.combatants);
     let turns = 0;
     let activeA = -1;
     let activeB = -1;
@@ -964,6 +1033,7 @@ export class BattlesService {
 
       const attackerA = teamA.combatants[attackerAIndex];
       const attackerB = teamB.combatants[attackerBIndex];
+      usedIndexesA.add(attackerAIndex);
 
       if (attackerAIndex !== activeA) {
         log.push(`Go! ${attackerA.name}!`);
@@ -1010,6 +1080,15 @@ export class BattlesService {
         log.push(`${step.actor.name} used ${step.move.name}. ${attackLog}`);
         if (step.target.currentHp <= 0) {
           log.push(`${step.target.name} fainted.`);
+          if (opponentRefs.has(step.target) && !defeatedOpponentRefs.has(step.target)) {
+            defeatedOpponentRefs.add(step.target);
+            defeatedOpponentsB.push({
+              name: step.target.name,
+              slug: step.target.slug,
+              level: step.target.level,
+              expYield: step.target.expYield,
+            });
+          }
         }
       }
 
@@ -1025,6 +1104,15 @@ export class BattlesService {
         log.push(endTurnB);
         if (attackerB.currentHp <= 0) {
           log.push(`${attackerB.name} fainted.`);
+          if (!defeatedOpponentRefs.has(attackerB)) {
+            defeatedOpponentRefs.add(attackerB);
+            defeatedOpponentsB.push({
+              name: attackerB.name,
+              slug: attackerB.slug,
+              level: attackerB.level,
+              expYield: attackerB.expYield,
+            });
+          }
         }
       }
     }
@@ -1048,6 +1136,8 @@ export class BattlesService {
       remainingHpA,
       remainingHpB,
       ended: true,
+      usedIndexesA: [...usedIndexesA],
+      defeatedOpponentsB,
     };
   }
 
@@ -1342,6 +1432,9 @@ export class BattlesService {
     if (state.mustPlayerSwitch === undefined) {
       state.mustPlayerSwitch = false;
     }
+    if (!Array.isArray(state.participantPlayerIndexes)) {
+      state.participantPlayerIndexes = [];
+    }
     return state;
   }
 
@@ -1382,6 +1475,7 @@ export class BattlesService {
       winnerSide: state.winner,
       result: state.result ?? null,
       rewards: state.rewards ?? null,
+      creatureProgression: state.creatureProgression ?? [],
       ratingDelta: state.ratingDelta ?? null,
       player: player
         ? {
@@ -1489,6 +1583,30 @@ export class BattlesService {
       state.rewards = { coins: coinsAwarded, xp: xpAwarded };
       state.ratingDelta = ratingDelta;
 
+      const teamSlots = await tx.teamSlot.findMany({
+        where: { teamId: playerTeamId },
+        orderBy: [{ slot: 'asc' }],
+        select: { userCreatureId: true },
+      });
+      const participantIndexes = Array.from(new Set(state.participantPlayerIndexes ?? [0]));
+      const participantCreatureIds = participantIndexes
+        .map((index) => teamSlots[index]?.userCreatureId)
+        .filter((id): id is string => typeof id === 'string');
+      const defeatedOpponents = state.opponentTeam
+        .filter((combatant) => combatant.currentHp <= 0)
+        .map((combatant) => ({
+          name: combatant.name,
+          slug: combatant.slug,
+          level: combatant.level,
+          expYield: combatant.expYield,
+        }));
+      state.creatureProgression = await this.applyFireRedCreatureExperience(tx, {
+        userId,
+        participantCreatureIds,
+        defeatedOpponents,
+        trainerBattle: true,
+      });
+
       await tx.user.update({
         where: { id: userId },
         data: {
@@ -1534,5 +1652,147 @@ export class BattlesService {
 
   private randomFloat(min: number, max: number): number {
     return Math.random() * (max - min) + min;
+  }
+
+  private markParticipantCreature(state: LiveBattleState, index: number): void {
+    if (index < 0) {
+      return;
+    }
+    if (!Array.isArray(state.participantPlayerIndexes)) {
+      state.participantPlayerIndexes = [];
+    }
+    if (!state.participantPlayerIndexes.includes(index)) {
+      state.participantPlayerIndexes.push(index);
+    }
+  }
+
+  private baseExpYieldFromBaseStats(
+    baseHp: number,
+    baseAttack: number,
+    baseDefense: number,
+    baseSpeed: number,
+  ): number {
+    const score = baseHp + baseAttack + baseDefense + baseSpeed;
+    return Math.max(40, Math.min(255, Math.round(score * 0.7)));
+  }
+
+  private getExpToNextLevel(level: number): number {
+    const current = Math.max(1, Math.min(100, level));
+    if (current >= 100) {
+      return 0;
+    }
+    return (current + 1) ** 3 - current ** 3;
+  }
+
+  private computeFireRedExperienceShare(
+    defeatedOpponent: { level: number; expYield: number },
+    participantsCount: number,
+    trainerBattle: boolean,
+  ): number {
+    if (participantsCount <= 0) {
+      return 0;
+    }
+    const trainerMultiplier = trainerBattle ? 1.5 : 1;
+    const raw = ((defeatedOpponent.expYield * defeatedOpponent.level) / (7 * participantsCount)) * trainerMultiplier;
+    return Math.max(1, Math.floor(raw));
+  }
+
+  private async applyFireRedCreatureExperience(
+    tx: Prisma.TransactionClient,
+    input: {
+      userId: string;
+      participantCreatureIds: string[];
+      defeatedOpponents: Array<{ level: number; expYield: number }>;
+      trainerBattle: boolean;
+    },
+  ): Promise<CreatureBattleProgress[]> {
+    const participantIds = Array.from(new Set(input.participantCreatureIds));
+    if (participantIds.length === 0 || input.defeatedOpponents.length === 0) {
+      return [];
+    }
+
+    const progressRows = await tx.userCreature.findMany({
+      where: {
+        userId: input.userId,
+        id: { in: participantIds },
+      },
+      select: {
+        id: true,
+        level: true,
+        xp: true,
+        species: {
+          select: {
+            name: true,
+            slug: true,
+          },
+        },
+      },
+    });
+
+    const totalGain = input.defeatedOpponents.reduce((sum, defeatedOpponent) => {
+      return (
+        sum +
+        this.computeFireRedExperienceShare(
+          defeatedOpponent,
+          progressRows.length,
+          input.trainerBattle,
+        )
+      );
+    }, 0);
+    if (totalGain <= 0 || progressRows.length === 0) {
+      return [];
+    }
+
+    const progress: CreatureBattleProgress[] = [];
+    for (const creature of progressRows) {
+      let level = creature.level;
+      let xp = creature.xp;
+      let remainingGain = totalGain;
+
+      while (remainingGain > 0 && level < 100) {
+        const expToNext = this.getExpToNextLevel(level);
+        if (expToNext <= 0) {
+          level = 100;
+          xp = 0;
+          break;
+        }
+
+        const needed = expToNext - xp;
+        if (remainingGain >= needed) {
+          remainingGain -= needed;
+          level += 1;
+          xp = 0;
+        } else {
+          xp += remainingGain;
+          remainingGain = 0;
+        }
+      }
+
+      if (level >= 100) {
+        level = 100;
+        xp = 0;
+      }
+
+      await tx.userCreature.update({
+        where: { id: creature.id },
+        data: {
+          level,
+          xp,
+        },
+      });
+
+      progress.push({
+        creatureId: creature.id,
+        name: creature.species.name,
+        slug: creature.species.slug,
+        levelBefore: creature.level,
+        levelAfter: level,
+        xpBefore: creature.xp,
+        xpAfter: xp,
+        xpGained: totalGain,
+      });
+    }
+
+    return progress;
   }
 }
