@@ -1,0 +1,238 @@
+<nav class="sticky top-0 z-50 border-b border-red-100/70 bg-white/80 backdrop-blur-xl">
+  <div class="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+    <a
+      routerLink="/"
+      class="inline-flex items-center gap-3 text-lg font-extrabold tracking-tight text-slate-900"
+    >
+      <span
+        class="relative inline-flex size-10 items-center justify-center overflow-hidden rounded-full border-2 border-slate-900 bg-white"
+      >
+        <span class="absolute inset-x-0 top-0 h-1/2 bg-brand-500"></span>
+        <span class="absolute inset-x-0 bottom-0 h-1/2 bg-white"></span>
+        <span
+          class="z-10 inline-flex size-4 rounded-full border-2 border-slate-900 bg-white"
+        ></span>
+      </span>
+      {{ 'app.name' | t }}
+    </a>
+
+    <button
+      type="button"
+      class="inline-flex items-center rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 md:hidden"
+      (click)="toggleMenu()"
+      [attr.aria-expanded]="menuOpen()"
+      aria-label="Toggle navigation"
+    >
+      {{ 'nav.menu' | t }}
+    </button>
+
+    <div class="hidden items-center gap-2 md:flex">
+      <a
+        routerLink="/"
+        routerLinkActive="bg-red-100 text-red-800"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+      >
+        {{ 'nav.home' | t }}
+      </a>
+
+      @if (isAuthenticated()) {
+        <a
+          routerLink="/dashboard"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+          >{{ 'nav.dashboard' | t }}</a
+        >
+        <a
+          routerLink="/my-club"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+          >{{ 'nav.myClub' | t }}</a
+        >
+        <a
+          routerLink="/packs"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+          >{{ 'nav.packs' | t }}</a
+        >
+        <a
+          routerLink="/store"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+          >{{ 'nav.store' | t }}</a
+        >
+        <a
+          routerLink="/squad"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+          >{{ 'nav.squad' | t }}</a
+        >
+        <a
+          routerLink="/battles"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+          >{{ 'nav.battles' | t }}</a
+        >
+        <a
+          routerLink="/ranked"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+          >{{ 'nav.ranked' | t }}</a
+        >
+        <a
+          routerLink="/inventory"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+          >{{ 'nav.inventory' | t }}</a
+        >
+        <span
+          class="mx-1 inline-flex items-center gap-2 rounded-full bg-yellow-50 px-3 py-1 text-xs font-semibold text-slate-700"
+        >
+          <span class="pokeball-dot"></span>
+          {{ user()?.username }}
+        </span>
+        <button type="button" class="btn-poke" (click)="logout()">{{ 'nav.logout' | t }}</button>
+      } @else {
+        <a
+          routerLink="/login"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-red-50"
+          >{{ 'nav.login' | t }}</a
+        >
+        <a routerLink="/register" class="btn-poke">{{ 'nav.register' | t }}</a>
+      }
+
+      <div class="relative">
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+          (click)="toggleLocaleMenu()"
+        >
+          <span>{{ localeFlag(currentLocale()) }}</span>
+          <span>{{ currentLocale().toUpperCase() }}</span>
+        </button>
+        @if (localeOpen()) {
+          <div
+            class="absolute right-0 top-12 z-50 w-36 rounded-xl border border-slate-200 bg-white p-1 shadow-lg"
+          >
+            @for (locale of locales; track locale) {
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-slate-700 hover:bg-red-50"
+                (click)="setLocale(locale)"
+              >
+                <span>{{ localeFlag(locale) }}</span>
+                <span>{{ locale.toUpperCase() }}</span>
+              </button>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  @if (menuOpen()) {
+    <div class="border-t border-red-100 bg-white/90 px-4 py-4 md:hidden">
+      <div class="flex flex-col gap-2">
+        <div class="mb-2 flex items-center gap-2">
+          <p class="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">
+            {{ 'nav.language' | t }}
+          </p>
+          @for (locale of locales; track locale) {
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold"
+              [class.bg-red-50]="currentLocale() === locale"
+              (click)="setLocale(locale)"
+            >
+              <span>{{ localeFlag(locale) }}</span>
+              <span>{{ locale.toUpperCase() }}</span>
+            </button>
+          }
+        </div>
+
+        <a
+          routerLink="/"
+          [routerLinkActiveOptions]="{ exact: true }"
+          routerLinkActive="bg-red-100 text-red-800"
+          class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+          (click)="closeMenu()"
+          >{{ 'nav.home' | t }}</a
+        >
+        @if (isAuthenticated()) {
+          <a
+            routerLink="/dashboard"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+            >{{ 'nav.dashboard' | t }}</a
+          >
+          <a
+            routerLink="/my-club"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+            >{{ 'nav.myClub' | t }}</a
+          >
+          <a
+            routerLink="/packs"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+            >{{ 'nav.packs' | t }}</a
+          >
+          <a
+            routerLink="/store"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+            >{{ 'nav.store' | t }}</a
+          >
+          <a
+            routerLink="/squad"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+            >{{ 'nav.squad' | t }}</a
+          >
+          <a
+            routerLink="/battles"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+            >{{ 'nav.battles' | t }}</a
+          >
+          <a
+            routerLink="/ranked"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+            >{{ 'nav.ranked' | t }}</a
+          >
+          <a
+            routerLink="/inventory"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+            >{{ 'nav.inventory' | t }}</a
+          >
+          <span class="px-3 py-1 text-sm text-slate-600">{{ user()?.username }}</span>
+          <button type="button" class="btn-poke w-full" (click)="logout()">
+            {{ 'nav.logout' | t }}
+          </button>
+        } @else {
+          <a
+            routerLink="/login"
+            routerLinkActive="bg-red-100 text-red-800"
+            class="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-red-50"
+            (click)="closeMenu()"
+            >{{ 'nav.login' | t }}</a
+          >
+          <a routerLink="/register" class="btn-poke w-full" (click)="closeMenu()">{{
+            'nav.register' | t
+          }}</a>
+        }
+      </div>
+    </div>
+  }
+</nav>

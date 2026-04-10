@@ -1,0 +1,153 @@
+<section class="space-y-6">
+  <div class="panel-pokedex arena-shell p-8">
+    <p class="text-xs font-bold uppercase tracking-[0.14em] text-red-700">
+      {{ 'myClub.kicker' | t }}
+    </p>
+    <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900">{{ 'myClub.title' | t }}</h1>
+    <p class="mt-2 text-sm text-slate-600">
+      {{ 'myClub.subtitle' | t }}
+    </p>
+  </div>
+
+  <article class="panel-pokedex p-6">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h2 class="text-xl font-bold text-slate-900">{{ 'myClub.cards' | t }}</h2>
+        <p class="mt-1 text-sm text-slate-600">{{ 'myClub.cardsSubtitle' | t }}</p>
+      </div>
+      <button type="button" class="btn-poke-soft px-3 py-2 text-xs" (click)="loadCreatures()">
+        {{ 'common.refresh' | t }}
+      </button>
+    </div>
+
+    @if (creaturesError()) {
+      <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        {{ creaturesError() }}
+      </div>
+    }
+
+    @if (loadingCreatures()) {
+      <p class="mt-4 text-sm text-slate-500">{{ 'myClub.loading' | t }}</p>
+    } @else if (creatures().length === 0) {
+      <p class="mt-4 text-sm text-slate-500">{{ 'myClub.empty' | t }}</p>
+    } @else {
+      <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        @for (creature of creatures(); track creature.id) {
+          <div class="space-y-2">
+            <app-pokemon-card [creature]="creature" />
+            <button
+              type="button"
+              class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-red-300 hover:text-red-700"
+              (click)="openMoveEditor(creature)"
+            >
+              {{ 'myClub.manageMoves' | t }}
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </article>
+
+  @if (selectedCreature(); as selected) {
+    <article class="panel-pokedex p-6">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">{{ 'myClub.moveEditor' | t }}</h2>
+          <p class="mt-1 text-sm text-slate-600">
+            {{
+              selected.nickname || (selected.species.slug | l10n: 'pokemon' : selected.species.name)
+            }}
+            - {{ 'myClub.chooseMoves' | t }}
+          </p>
+        </div>
+        <button type="button" class="btn-poke-soft px-3 py-2 text-xs" (click)="closeMoveEditor()">
+          {{ 'common.close' | t }}
+        </button>
+      </div>
+
+      <div class="mt-4 grid gap-4 lg:grid-cols-[1fr_auto]">
+        <div class="space-y-3">
+          @for (moveId of editableMoveIds(); track $index) {
+            <div class="rounded-xl border border-slate-200 bg-white p-3">
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+                  Slot {{ $index + 1 }}
+                </p>
+                <button
+                  type="button"
+                  class="text-[11px] font-semibold text-red-700 disabled:opacity-40"
+                  [disabled]="editableMoveIds().length <= 1"
+                  (click)="removeMoveSlot($index)"
+                >
+                  {{ 'common.remove' | t }}
+                </button>
+              </div>
+              <select
+                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+                [value]="moveId"
+                (change)="updateSlotMove($index, $any($event.target).value)"
+              >
+                @for (move of selected.availableMoves; track move.id) {
+                  <option [value]="move.id">
+                    {{ moveName(move.slug, move.name) }} ({{
+                      move.type | l10n: 'type' : move.type
+                    }}
+                    - Pow {{ move.power ?? '--' }} - Acc {{ move.accuracy ?? '--' }})
+                  </option>
+                }
+              </select>
+            </div>
+          }
+
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              class="btn-poke-soft px-3 py-2 text-xs disabled:opacity-40"
+              [disabled]="editableMoveIds().length >= 4"
+              (click)="addMoveSlot()"
+            >
+              {{ 'myClub.addSlot' | t }}
+            </button>
+            <button
+              type="button"
+              class="btn-poke px-4 py-2 text-xs disabled:opacity-40"
+              [disabled]="savingMoves()"
+              (click)="saveMoves()"
+            >
+              @if (savingMoves()) {
+                {{ 'myClub.saving' | t }}
+              } @else {
+                {{ 'myClub.saveMoveSet' | t }}
+              }
+            </button>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white p-3">
+          <p class="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+            {{ 'myClub.currentSet' | t }}
+          </p>
+          <ul class="mt-2 space-y-1 text-sm text-slate-700">
+            <li>1. {{ currentMoveName(selected, 1) }}</li>
+            <li>2. {{ currentMoveName(selected, 2) }}</li>
+            <li>3. {{ currentMoveName(selected, 3) }}</li>
+            <li>4. {{ currentMoveName(selected, 4) }}</li>
+          </ul>
+        </div>
+      </div>
+
+      @if (moveEditorError()) {
+        <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {{ moveEditorError() }}
+        </div>
+      }
+      @if (moveEditorSuccess()) {
+        <div
+          class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"
+        >
+          {{ moveEditorSuccess() }}
+        </div>
+      }
+    </article>
+  }
+</section>

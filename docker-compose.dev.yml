@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pokefifa-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pokefifa
+      POSTGRES_USER: pokefifa
+      POSTGRES_PASSWORD: pokefifa
+    ports:
+      - '5432:5432'
+    volumes:
+      - pokefifa_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U pokefifa -d pokefifa']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  maildev:
+    image: maildev/maildev:2.1.0
+    container_name: pokefifa-maildev-dev
+    restart: unless-stopped
+    ports:
+      - '1025:1025'
+      - '1080:1080'
+
+volumes:
+  pokefifa_pg_data:

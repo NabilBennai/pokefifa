@@ -1,0 +1,179 @@
+<section class="space-y-6">
+  <div class="panel-pokedex arena-shell p-8">
+    <p class="text-xs font-bold uppercase tracking-[0.14em] text-red-700">
+      {{ 'packs.kicker' | t }}
+    </p>
+    <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900">{{ 'packs.title' | t }}</h1>
+    <p class="mt-2 text-sm text-slate-600">
+      {{ 'packs.subtitle' | t }}
+    </p>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-2">
+    <article class="panel-pokedex p-6">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">{{ 'packs.unopened' | t }}</h2>
+          <p class="mt-1 text-sm text-slate-600">{{ 'packs.ready' | t }}</p>
+        </div>
+        <button type="button" class="btn-poke-soft px-3 py-2 text-xs" (click)="loadPacks()">
+          {{ 'common.refresh' | t }}
+        </button>
+      </div>
+
+      @if (packsError()) {
+        <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {{ packsError() }}
+        </div>
+      }
+
+      @if (loadingPacks()) {
+        <p class="mt-4 text-sm text-slate-500">{{ 'packs.loading' | t }}</p>
+      } @else if (packs().length === 0) {
+        <p class="mt-4 text-sm text-slate-500">{{ 'packs.empty' | t }}</p>
+      } @else {
+        <ul class="mt-4 space-y-3">
+          @for (pack of packs(); track pack.id) {
+            <li
+              class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/70 bg-white/75 px-4 py-3"
+            >
+              <div>
+                <p class="text-sm font-bold text-slate-900">
+                  {{ pack.packDefinition.slug | l10n: 'pack' : pack.packDefinition.name }}
+                </p>
+                <p class="mt-1 text-xs text-slate-500">{{ pack.createdAt | date: 'short' }}</p>
+                <span class="pack-pill mt-2">
+                  {{ pack.packDefinition.type | l10n: 'packType' : pack.packDefinition.type }}
+                </span>
+              </div>
+              <button
+                type="button"
+                [disabled]="openingPackId() !== null"
+                class="btn-poke px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60"
+                (click)="openPack(pack.id)"
+              >
+                @if (openingPackId() === pack.id) {
+                  {{ 'packs.openingInList' | t }}
+                } @else {
+                  {{ 'packs.openPackAction' | t }}
+                }
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </article>
+
+    <article class="panel-pokedex p-6">
+      <h2 class="text-xl font-bold text-slate-900">{{ 'packs.history' | t }}</h2>
+      <p class="mt-1 text-sm text-slate-600">{{ 'packs.historySubtitle' | t }}</p>
+
+      @if (loadingHistory()) {
+        <p class="mt-4 text-sm text-slate-500">{{ 'packs.historyLoading' | t }}</p>
+      } @else if (packHistory().length === 0) {
+        <p class="mt-4 text-sm text-slate-500">{{ 'packs.historyEmpty' | t }}</p>
+      } @else {
+        <ul class="mt-4 space-y-3">
+          @for (entry of packHistory(); track entry.id) {
+            <li class="rounded-2xl border border-white/70 bg-white/75 p-4">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="text-sm font-bold text-slate-900">
+                  {{ entry.packDefinition.slug | l10n: 'pack' : entry.packDefinition.name }}
+                </p>
+                <span class="pack-pill">{{
+                  entry.packDefinition.type | l10n: 'packType' : entry.packDefinition.type
+                }}</span>
+              </div>
+              <p class="mt-1 text-xs text-slate-500">{{ entry.openedAt | date: 'short' }}</p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                @for (reward of entry.rewards; track reward.id) {
+                  <span class="type-chip">
+                    @if (reward.rewardType === 'CREATURE' && reward.species) {
+                      {{ reward.species.slug | l10n: 'pokemon' : reward.species.name }}
+                    } @else if (reward.rewardType === 'ITEM' && reward.item) {
+                      {{ reward.item.slug | l10n: 'item' : reward.item.name }} x{{
+                        reward.quantity
+                      }}
+                    } @else {
+                      {{ reward.rewardType }} x{{ reward.quantity }}
+                    }
+                  </span>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    </article>
+  </div>
+</section>
+
+@if (openingModalOpen()) {
+  <div
+    class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+  >
+    <div class="w-full max-w-lg rounded-3xl border border-white/35 bg-white/95 p-6 shadow-2xl">
+      @if (!openingModalRevealed()) {
+        <div class="space-y-5 py-4 text-center">
+          <p class="text-sm font-semibold uppercase tracking-widest text-brand-700">
+            {{ 'packs.opening' | t }}
+          </p>
+          <div
+            class="reveal-pop mx-auto flex size-28 items-center justify-center rounded-full border-4 border-slate-900 bg-white shadow-lg"
+          >
+            <div class="relative size-20 overflow-hidden rounded-full border-4 border-slate-900">
+              <div class="absolute inset-x-0 top-0 h-1/2 bg-brand-500"></div>
+              <div class="absolute inset-x-0 bottom-0 h-1/2 bg-white"></div>
+              <div
+                class="absolute left-1/2 top-1/2 size-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-slate-900 bg-white"
+              ></div>
+            </div>
+          </div>
+          <p class="text-base font-bold text-slate-900">{{ openingModalTitle() }}</p>
+          <p class="text-sm text-slate-600">{{ 'packs.shuffling' | t }}</p>
+        </div>
+      } @else {
+        <div class="reveal-pop space-y-4">
+          <div class="text-center">
+            <p class="text-sm font-semibold uppercase tracking-widest text-brand-700">
+              {{ 'packs.rewardsRevealed' | t }}
+            </p>
+            <p class="mt-1 text-lg font-bold text-slate-900">
+              {{
+                openedResult()?.pack?.slug ?? '' | l10n: 'pack' : openedResult()?.pack?.name ?? ''
+              }}
+            </p>
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-2">
+            @for (reward of openedResult()?.rewards ?? []; track reward.id) {
+              <div class="rounded-2xl border border-slate-200 bg-white p-3">
+                @if (reward.rewardType === 'CREATURE' && reward.species) {
+                  <app-pokemon-card
+                    [rewardSpecies]="reward.species"
+                    [variant]="'compact'"
+                    [level]="1"
+                    [xp]="0"
+                  />
+                } @else if (reward.rewardType === 'ITEM' && reward.item) {
+                  <p class="text-xs text-slate-500">{{ 'inventory.items' | t }}</p>
+                  <p class="text-sm font-semibold text-slate-900">
+                    {{ reward.item.slug | l10n: 'item' : reward.item.name }} x{{ reward.quantity }}
+                  </p>
+                } @else {
+                  <p class="text-sm font-semibold text-slate-900">
+                    {{ reward.rewardType }} x{{ reward.quantity }}
+                  </p>
+                }
+              </div>
+            }
+          </div>
+
+          <button type="button" class="btn-poke w-full" (click)="closeOpeningModal()">
+            {{ 'common.continue' | t }}
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+}

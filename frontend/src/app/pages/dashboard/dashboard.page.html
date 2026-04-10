@@ -1,0 +1,171 @@
+<section class="space-y-8">
+  <div class="panel-pokedex arena-shell p-8">
+    <div class="flex flex-wrap items-end justify-between gap-6">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-[0.14em] text-red-700">
+          {{ 'dashboard.kicker' | t }}
+        </p>
+        <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900">
+          {{ 'dashboard.title' | t: { username: user()?.username ?? '' } }}
+        </h1>
+        <p class="mt-2 max-w-2xl text-sm text-slate-600">
+          {{ 'dashboard.subtitle' | t }}
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <a routerLink="/packs" class="btn-poke px-4 py-2 text-sm">{{
+          'dashboard.openPacks' | t
+        }}</a>
+        <a routerLink="/my-club" class="btn-poke-soft px-4 py-2 text-sm">{{ 'nav.myClub' | t }}</a>
+        <a routerLink="/store" class="btn-poke-soft px-4 py-2 text-sm">{{ 'nav.store' | t }}</a>
+        <a routerLink="/squad" class="btn-poke-soft px-4 py-2 text-sm">{{ 'nav.squad' | t }}</a>
+        <a routerLink="/battles" class="btn-poke-soft px-4 py-2 text-sm">{{ 'nav.battles' | t }}</a>
+        <a routerLink="/ranked" class="btn-poke-soft px-4 py-2 text-sm">{{ 'nav.ranked' | t }}</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <article class="stat-tile">
+      <h2 class="text-xs font-bold uppercase tracking-wide text-slate-500">
+        {{ 'dashboard.rating' | t }}
+      </h2>
+      <p class="mt-1 text-2xl font-black text-slate-900">{{ user()?.rating }}</p>
+    </article>
+    <article class="stat-tile">
+      <h2 class="text-xs font-bold uppercase tracking-wide text-slate-500">
+        {{ 'dashboard.level' | t }}
+      </h2>
+      <p class="mt-1 text-2xl font-black text-slate-900">{{ user()?.level }}</p>
+    </article>
+    <article class="stat-tile">
+      <h2 class="text-xs font-bold uppercase tracking-wide text-slate-500">
+        {{ 'dashboard.myCreatures' | t }}
+      </h2>
+      @if (loadingCreatures()) {
+        <p class="mt-1 text-sm font-semibold text-slate-500">{{ 'dashboard.loading' | t }}</p>
+      } @else {
+        <p class="mt-1 text-2xl font-black text-slate-900">{{ creatureCount() }}</p>
+      }
+      @if (creaturesError()) {
+        <p class="mt-1 text-xs text-red-700">{{ creaturesError() }}</p>
+      }
+    </article>
+    <article class="stat-tile">
+      <h2 class="text-xs font-bold uppercase tracking-wide text-slate-500">
+        {{ 'dashboard.unopenedPacks' | t }}
+      </h2>
+      @if (loadingPacks()) {
+        <p class="mt-1 text-sm font-semibold text-slate-500">{{ 'dashboard.loading' | t }}</p>
+      } @else {
+        <p class="mt-1 text-2xl font-black text-slate-900">{{ unopenedPackCount() }}</p>
+      }
+      @if (packsError()) {
+        <p class="mt-1 text-xs text-red-700">{{ packsError() }}</p>
+      }
+    </article>
+    <article class="stat-tile">
+      <h2 class="text-xs font-bold uppercase tracking-wide text-slate-500">
+        {{ 'dashboard.coins' | t }}
+      </h2>
+      <p class="mt-1 text-2xl font-black text-slate-900">{{ user()?.coins }}</p>
+    </article>
+    <article class="stat-tile">
+      <h2 class="text-xs font-bold uppercase tracking-wide text-slate-500">
+        {{ 'dashboard.gems' | t }}
+      </h2>
+      <p class="mt-1 text-2xl font-black text-slate-900">{{ user()?.gems }}</p>
+    </article>
+  </div>
+
+  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <a
+      routerLink="/packs"
+      class="panel-pokedex block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
+    >
+      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">
+        {{ 'nav.packs' | t }}
+      </p>
+      <h2 class="mt-2 text-xl font-black text-slate-900">
+        {{ 'dashboard.card.managePacksTitle' | t }}
+      </h2>
+      <p class="mt-2 text-sm text-slate-600">
+        {{ 'dashboard.card.managePacksBody' | t }}
+      </p>
+    </a>
+    <a
+      routerLink="/my-club"
+      class="panel-pokedex block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
+    >
+      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">
+        {{ 'nav.myClub' | t }}
+      </p>
+      <h2 class="mt-2 text-xl font-black text-slate-900">{{ 'dashboard.card.myClubTitle' | t }}</h2>
+      <p class="mt-2 text-sm text-slate-600">
+        {{ 'dashboard.card.myClubBody' | t }}
+      </p>
+    </a>
+    <a
+      routerLink="/store"
+      class="panel-pokedex block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
+    >
+      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">
+        {{ 'nav.store' | t }}
+      </p>
+      <h2 class="mt-2 text-xl font-black text-slate-900">{{ 'dashboard.card.storeTitle' | t }}</h2>
+      <p class="mt-2 text-sm text-slate-600">{{ 'dashboard.card.storeBody' | t }}</p>
+    </a>
+    <a
+      routerLink="/squad"
+      class="panel-pokedex block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
+    >
+      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">
+        {{ 'nav.squad' | t }}
+      </p>
+      <h2 class="mt-2 text-xl font-black text-slate-900">{{ 'dashboard.card.squadTitle' | t }}</h2>
+      <p class="mt-2 text-sm text-slate-600">
+        {{ 'dashboard.card.squadBody' | t }}
+      </p>
+    </a>
+    <a
+      routerLink="/battles"
+      class="panel-pokedex block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
+    >
+      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">
+        {{ 'nav.battles' | t }}
+      </p>
+      <h2 class="mt-2 text-xl font-black text-slate-900">
+        {{ 'dashboard.card.battlesTitle' | t }}
+      </h2>
+      <p class="mt-2 text-sm text-slate-600">
+        {{ 'dashboard.card.battlesBody' | t }}
+      </p>
+    </a>
+    <a
+      routerLink="/ranked"
+      class="panel-pokedex block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
+    >
+      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">
+        {{ 'nav.ranked' | t }}
+      </p>
+      <h2 class="mt-2 text-xl font-black text-slate-900">{{ 'dashboard.card.rankedTitle' | t }}</h2>
+      <p class="mt-2 text-sm text-slate-600">
+        {{ 'dashboard.card.rankedBody' | t }}
+      </p>
+    </a>
+    <a
+      routerLink="/inventory"
+      class="panel-pokedex block p-6 transition hover:-translate-y-0.5 hover:shadow-lg"
+    >
+      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">
+        {{ 'nav.inventory' | t }}
+      </p>
+      <h2 class="mt-2 text-xl font-black text-slate-900">
+        {{ 'dashboard.card.inventoryTitle' | t }}
+      </h2>
+      <p class="mt-2 text-sm text-slate-600">
+        {{ 'dashboard.card.inventoryBody' | t }}
+      </p>
+    </a>
+  </div>
+</section>

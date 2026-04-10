@@ -1,0 +1,431 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum BattleMode {
+  CASUAL
+  RANKED
+  AI
+}
+
+enum BattleResult {
+  WIN
+  LOSS
+  DRAW
+}
+
+enum TeamStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum CreatureRarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+  MYTHIC
+}
+
+enum InventoryItemType {
+  ITEM
+  TM
+  EVO_MATERIAL
+  PACK
+  CURRENCY
+}
+
+enum PackType {
+  BRONZE
+  SILVER
+  ELITE
+  EVENT
+}
+
+enum PackSource {
+  SHOP
+  REWARD
+  GIFT
+  ADMIN
+}
+
+enum CurrencyType {
+  COINS
+  GEMS
+  SHARDS
+}
+
+enum TransactionType {
+  BATTLE_REWARD
+  PACK_PURCHASE
+  PACK_OPEN
+  QUEST_REWARD
+  ADMIN_GRANT
+  DUPLICATE_CONVERT
+  CRAFT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String
+  role         UserRole @default(USER)
+
+  coins  Int @default(0)
+  gems   Int @default(0)
+  shards Int @default(0)
+  rating Int @default(1000)
+  level  Int @default(1)
+  xp     Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  teams          Team[]
+  ownedCreatures UserCreature[]
+  inventoryItems UserInventoryItem[]
+  ownedPacks     UserPack[]
+  battleLogsA    Battle[]              @relation("BattlePlayerA")
+  battleLogsB    Battle[]              @relation("BattlePlayerB")
+  currencyLogs   CurrencyTransaction[]
+
+  @@index([email])
+  @@index([username])
+}
+
+model CreatureSpecies {
+  id            String         @id @default(cuid())
+  slug          String         @unique
+  name          String
+  rarity        CreatureRarity
+  primaryType   String
+  secondaryType String?
+
+  baseHp        Int
+  baseAttack    Int
+  baseDefense   Int
+  baseSpAttack  Int
+  baseSpDefense Int
+  baseSpeed     Int
+
+  abilityName String?
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  moves              SpeciesMove[]
+  instances          UserCreature[]
+  packDrops          PackDropCreature[]
+  packOpeningRewards PackOpeningReward[]
+
+  @@index([name])
+  @@index([rarity])
+  @@index([primaryType])
+}
+
+model Move {
+  id             String  @id @default(cuid())
+  slug           String  @unique
+  name           String
+  type           String
+  power          Int?
+  accuracy       Int?
+  pp             Int?
+  isTmCompatible Boolean @default(false)
+  description    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  speciesMoves       SpeciesMove[]
+  tmItems            InventoryItem[]    @relation("TmMove")
+  learnedByCreatures UserCreatureMove[]
+
+  @@index([name])
+  @@index([type])
+}
+
+model SpeciesMove {
+  id          String  @id @default(cuid())
+  speciesId   String
+  moveId      String
+  unlockLevel Int     @default(1)
+  isDefault   Boolean @default(false)
+
+  species CreatureSpecies @relation(fields: [speciesId], references: [id], onDelete: Cascade)
+  move    Move            @relation(fields: [moveId], references: [id], onDelete: Cascade)
+
+  @@unique([speciesId, moveId])
+  @@index([speciesId])
+  @@index([moveId])
+}
+
+model UserCreature {
+  id        String @id @default(cuid())
+  userId    String
+  speciesId String
+
+  nickname String?
+  level    Int     @default(1)
+  xp       Int     @default(0)
+
+  ivHp        Int @default(0)
+  ivAttack    Int @default(0)
+  ivDefense   Int @default(0)
+  ivSpAttack  Int @default(0)
+  ivSpDefense Int @default(0)
+  ivSpeed     Int @default(0)
+
+  isFavorite Boolean @default(false)
+  isLocked   Boolean @default(false)
+
+  heldItemInstanceId String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  species      CreatureSpecies    @relation(fields: [speciesId], references: [id])
+  teamSlots    TeamSlot[]
+  learnedMoves UserCreatureMove[]
+
+  @@index([userId])
+  @@index([speciesId])
+  @@index([userId, speciesId])
+}
+
+model UserCreatureMove {
+  id             String @id @default(cuid())
+  userCreatureId String
+  moveId         String
+  slot           Int
+
+  userCreature UserCreature @relation(fields: [userCreatureId], references: [id], onDelete: Cascade)
+  move         Move         @relation(fields: [moveId], references: [id])
+
+  @@unique([userCreatureId, slot])
+  @@index([userCreatureId])
+  @@index([moveId])
+}
+
+model Team {
+  id        String     @id @default(cuid())
+  userId    String
+  name      String
+  status    TeamStatus @default(ACTIVE)
+  isDefault Boolean    @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slots          TeamSlot[]
+  battlesAsTeamA Battle[]   @relation("BattlePlayerATeam")
+  battlesAsTeamB Battle[]   @relation("BattlePlayerBTeam")
+
+  @@index([userId])
+  @@index([userId, isDefault])
+}
+
+model TeamSlot {
+  id             String @id @default(cuid())
+  teamId         String
+  userCreatureId String
+  slot           Int
+
+  team         Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userCreature UserCreature @relation(fields: [userCreatureId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, slot])
+  @@unique([teamId, userCreatureId])
+  @@index([teamId])
+  @@index([userCreatureId])
+}
+
+model InventoryItem {
+  id          String            @id @default(cuid())
+  slug        String            @unique
+  name        String
+  type        InventoryItemType
+  description String?
+  tmMoveId    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tmMove             Move?               @relation("TmMove", fields: [tmMoveId], references: [id])
+  userItems          UserInventoryItem[]
+  packDrops          PackDropItem[]
+  packOpeningRewards PackOpeningReward[]
+
+  @@index([type])
+  @@index([name])
+}
+
+model UserInventoryItem {
+  id       String @id @default(cuid())
+  userId   String
+  itemId   String
+  quantity Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item InventoryItem @relation(fields: [itemId], references: [id])
+
+  @@unique([userId, itemId])
+  @@index([userId])
+  @@index([itemId])
+}
+
+model PackDefinition {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  type        PackType
+  coinPrice   Int?
+  gemPrice    Int?
+  isActive    Boolean  @default(true)
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creatureDrops PackDropCreature[]
+  itemDrops     PackDropItem[]
+  ownedPacks    UserPack[]
+
+  @@index([type])
+  @@index([isActive])
+}
+
+model PackDropCreature {
+  id               String @id @default(cuid())
+  packDefinitionId String
+  speciesId        String
+  weight           Int
+
+  packDefinition PackDefinition  @relation(fields: [packDefinitionId], references: [id], onDelete: Cascade)
+  species        CreatureSpecies @relation(fields: [speciesId], references: [id])
+
+  @@unique([packDefinitionId, speciesId])
+  @@index([packDefinitionId])
+  @@index([speciesId])
+}
+
+model PackDropItem {
+  id               String @id @default(cuid())
+  packDefinitionId String
+  itemId           String
+  quantityMin      Int    @default(1)
+  quantityMax      Int    @default(1)
+  weight           Int
+
+  packDefinition PackDefinition @relation(fields: [packDefinitionId], references: [id], onDelete: Cascade)
+  item           InventoryItem  @relation(fields: [itemId], references: [id])
+
+  @@unique([packDefinitionId, itemId])
+  @@index([packDefinitionId])
+  @@index([itemId])
+}
+
+model UserPack {
+  id               String     @id @default(cuid())
+  userId           String
+  packDefinitionId String
+  source           PackSource @default(SHOP)
+  openedAt         DateTime?
+  createdAt        DateTime   @default(now())
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  packDefinition PackDefinition @relation(fields: [packDefinitionId], references: [id])
+
+  rewards PackOpeningReward[]
+
+  @@index([userId])
+  @@index([packDefinitionId])
+  @@index([openedAt])
+}
+
+model PackOpeningReward {
+  id         String  @id @default(cuid())
+  userPackId String
+  rewardType String
+  speciesId  String?
+  itemId     String?
+  quantity   Int     @default(1)
+
+  userPack UserPack         @relation(fields: [userPackId], references: [id], onDelete: Cascade)
+  species  CreatureSpecies? @relation(fields: [speciesId], references: [id])
+  item     InventoryItem?   @relation(fields: [itemId], references: [id])
+
+  @@index([userPackId])
+  @@index([speciesId])
+  @@index([itemId])
+}
+
+model Battle {
+  id            String        @id @default(cuid())
+  mode          BattleMode
+  playerAId     String
+  playerBId     String?
+  playerATeamId String
+  playerBTeamId String?
+  winnerUserId  String?
+  resultForA    BattleResult?
+  resultForB    BattleResult?
+
+  playerARatingBefore Int?
+  playerARatingAfter  Int?
+  playerBRatingBefore Int?
+  playerBRatingAfter  Int?
+
+  coinsAwardedA Int @default(0)
+  coinsAwardedB Int @default(0)
+
+  battleLogJson Json?
+  createdAt     DateTime  @default(now())
+  finishedAt    DateTime?
+
+  playerA     User  @relation("BattlePlayerA", fields: [playerAId], references: [id], onDelete: Cascade)
+  playerB     User? @relation("BattlePlayerB", fields: [playerBId], references: [id])
+  playerATeam Team  @relation("BattlePlayerATeam", fields: [playerATeamId], references: [id])
+  playerBTeam Team? @relation("BattlePlayerBTeam", fields: [playerBTeamId], references: [id])
+
+  @@index([playerAId])
+  @@index([playerBId])
+  @@index([winnerUserId])
+  @@index([mode])
+  @@index([createdAt])
+}
+
+model CurrencyTransaction {
+  id              String          @id @default(cuid())
+  userId          String
+  currencyType    CurrencyType
+  amount          Int
+  transactionType TransactionType
+  referenceId     String?
+  metadata        Json?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([currencyType])
+  @@index([transactionType])
+  @@index([createdAt])
+}

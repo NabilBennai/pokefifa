@@ -1,0 +1,85 @@
+<section class="space-y-8">
+  <div class="panel-pokedex hero-grid overflow-hidden p-8 md:p-12">
+    <div class="grid gap-10 md:grid-cols-[1.2fr_0.8fr]">
+      <div class="space-y-6">
+        <span
+          class="inline-flex items-center gap-2 rounded-full border border-red-200 bg-white/85 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-red-700"
+        >
+          <span class="pokeball-dot"></span>
+          {{ 'home.badge' | t }}
+        </span>
+
+        <h1 class="max-w-3xl text-4xl font-black leading-tight text-slate-900 sm:text-5xl">
+          {{ 'home.title' | t }}
+        </h1>
+
+        <p class="max-w-2xl text-base leading-relaxed text-slate-700 sm:text-lg">
+          {{ 'home.subtitle' | t }}
+        </p>
+
+        <div class="flex flex-wrap gap-3">
+          @if (isAuthenticated()) {
+            <a routerLink="/dashboard" class="btn-poke px-6">{{ 'home.goDashboard' | t }}</a>
+            <span class="btn-poke-soft">{{
+              'nav.signedInAs' | t: { username: user()?.username ?? '' }
+            }}</span>
+          } @else {
+            <a routerLink="/register" class="btn-poke px-6">{{ 'home.createClub' | t }}</a>
+            <a routerLink="/login" class="btn-poke-soft px-6">{{ 'nav.login' | t }}</a>
+          }
+        </div>
+      </div>
+
+      <div class="grid gap-4">
+        <article class="rounded-2xl border border-red-100 bg-white/90 p-5 shadow-sm">
+          <p class="text-xs font-bold uppercase tracking-wider text-red-600">
+            {{ 'home.packEconomy' | t }}
+          </p>
+          <p class="mt-2 text-xl font-black text-slate-900">
+            {{ 'Bronze / Silver / Elite / Event' | t }}
+          </p>
+        </article>
+        <article class="rounded-2xl border border-yellow-100 bg-white/90 p-5 shadow-sm">
+          <p class="text-xs font-bold uppercase tracking-wider text-amber-600">
+            {{ 'home.battleModes' | t }}
+          </p>
+          <p class="mt-2 text-xl font-black text-slate-900">{{ 'Casual, Ranked, AI' | t }}</p>
+        </article>
+        <article class="rounded-2xl border border-sky-100 bg-white/90 p-5 shadow-sm">
+          <p class="text-xs font-bold uppercase tracking-wider text-sky-600">
+            {{ 'home.progression' | t }}
+          </p>
+          <p class="mt-2 text-xl font-black text-slate-900">
+            {{ 'Level, XP, Rating, Currencies' | t }}
+          </p>
+        </article>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid gap-6 md:grid-cols-3">
+    <article class="panel-pokedex p-6">
+      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">{{ 'Step 1' | t }}</p>
+      <h2 class="mt-2 text-lg font-black text-slate-900">{{ 'home.step1.title' | t }}</h2>
+      <p class="mt-2 text-sm leading-relaxed text-slate-700">
+        {{ 'home.step1.body' | t }}
+      </p>
+    </article>
+
+    <article class="panel-pokedex p-6">
+      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">{{ 'Step 2' | t }}</p>
+      <h2 class="mt-2 text-lg font-black text-slate-900">{{ 'home.step2.title' | t }}</h2>
+      <p class="mt-2 text-sm leading-relaxed text-slate-700">
+        {{ 'home.step2.body' | t }}
+      </p>
+    </article>
+
+    <article class="panel-pokedex p-6">
+      <p class="text-xs font-bold uppercase tracking-[0.12em] text-red-700">{{ 'Step 3' | t }}</p>
+      <h2 class="mt-2 text-lg font-black text-slate-900">{{ 'home.step3.title' | t }}</h2>
+      <p class="mt-2 text-sm leading-relaxed text-slate-700">
+        {{ 'home.step3.body' | t }}
+      </p>
+    </article>
+  </div>
+</section>

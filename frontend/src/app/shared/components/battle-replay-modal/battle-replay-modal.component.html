@@ -1,0 +1,82 @@
+@if (open && battle) {
+  <div
+    class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 p-4 backdrop-blur-sm"
+  >
+    <div class="fr-shell w-full max-w-3xl">
+      <div class="fr-head">
+        <p class="fr-title">{{ title }}</p>
+        <button type="button" class="fr-close" (click)="close()">{{ 'common.close' | t }}</button>
+      </div>
+
+      <div class="fr-stage">
+        <div class="fr-foe-panel">
+          <p class="fr-name">{{ opponentLabel }}</p>
+          <p class="fr-level">{{ turnLabel }}</p>
+          <div class="fr-hp-track">
+            <div
+              class="fr-hp-fill"
+              [class]="hpClass(opponentHpPercent)"
+              [style.width.%]="opponentHpPercent"
+            ></div>
+          </div>
+        </div>
+
+        <div class="fr-foe-sprite-wrap">
+          @if (opponentSpriteUrl) {
+            <img [src]="opponentSpriteUrl" [alt]="opponentLabel" class="fr-foe-sprite" />
+          }
+        </div>
+
+        <div class="fr-player-sprite-wrap">
+          @if (playerSpriteUrl) {
+            <img [src]="playerSpriteUrl" [alt]="playerLabel" class="fr-player-sprite" />
+          }
+        </div>
+
+        <div class="fr-player-panel">
+          <p class="fr-name">{{ playerLabel }}</p>
+          <p class="fr-level">HP {{ playerHpPercent }}%</p>
+          <div class="fr-hp-track">
+            <div
+              class="fr-hp-fill"
+              [class]="hpClass(playerHpPercent)"
+              [style.width.%]="playerHpPercent"
+            ></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fr-textbox">
+        <p class="fr-msg">{{ message }}</p>
+        @if (completed && outcomeLabel) {
+          <p class="fr-outcome">{{ 'common.result' | t }}: {{ outcomeLabel }}</p>
+        }
+        <div class="fr-actions">
+          <button
+            type="button"
+            class="btn-poke px-3 py-2 text-xs"
+            (click)="nextStep()"
+            [disabled]="completed"
+          >
+            {{ 'Next' | t }}
+          </button>
+          <button
+            type="button"
+            class="btn-poke-soft px-3 py-2 text-xs"
+            (click)="skipToEnd()"
+            [disabled]="completed"
+          >
+            {{ 'Skip' | t }}
+          </button>
+          <button type="button" class="btn-poke-soft px-3 py-2 text-xs" (click)="close()">
+            @if (completed) {
+              {{ 'common.continue' | t }}
+            } @else {
+              {{ 'common.close' | t }}
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

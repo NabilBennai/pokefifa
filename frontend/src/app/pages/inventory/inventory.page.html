@@ -1,0 +1,93 @@
+<section class="space-y-6">
+  <div class="panel-pokedex arena-shell p-8">
+    <p class="text-xs font-bold uppercase tracking-[0.14em] text-red-700">
+      {{ 'inventory.kicker' | t }}
+    </p>
+    <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900">
+      {{ 'inventory.title' | t }}
+    </h1>
+    <p class="mt-2 text-sm text-slate-600">{{ 'inventory.subtitle' | t }}</p>
+  </div>
+
+  @if (error()) {
+    <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      {{ error() }}
+    </div>
+  }
+
+  @if (loading() && !overview()) {
+    <p class="text-sm text-slate-500">{{ 'common.loading' | t }}</p>
+  } @else if (overview()) {
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <article class="stat-tile">
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">
+          {{ 'dashboard.coins' | t }}
+        </p>
+        <p class="mt-1 text-2xl font-black text-slate-900">{{ overview()!.currencies.coins }}</p>
+      </article>
+      <article class="stat-tile">
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">
+          {{ 'dashboard.gems' | t }}
+        </p>
+        <p class="mt-1 text-2xl font-black text-slate-900">{{ overview()!.currencies.gems }}</p>
+      </article>
+      <article class="stat-tile">
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">
+          {{ 'dashboard.shards' | t }}
+        </p>
+        <p class="mt-1 text-2xl font-black text-slate-900">{{ overview()!.currencies.shards }}</p>
+      </article>
+      <article class="stat-tile">
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">
+          {{ 'dashboard.myCreatures' | t }}
+        </p>
+        <p class="mt-1 text-2xl font-black text-slate-900">{{ overview()!.totals.creatures }}</p>
+      </article>
+      <article class="stat-tile">
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">
+          {{ 'inventory.items' | t }}
+        </p>
+        <p class="mt-1 text-2xl font-black text-slate-900">{{ overview()!.totals.items }}</p>
+      </article>
+      <article class="stat-tile">
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">
+          {{ 'dashboard.unopenedPacks' | t }}
+        </p>
+        <p class="mt-1 text-2xl font-black text-slate-900">
+          {{ overview()!.totals.unopenedPacks }}
+        </p>
+      </article>
+    </div>
+  }
+
+  <article class="panel-pokedex p-6">
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-bold text-slate-900">{{ 'inventory.items' | t }}</h2>
+      <button type="button" class="btn-poke-soft px-3 py-2 text-xs" (click)="loadData()">
+        {{ 'common.refresh' | t }}
+      </button>
+    </div>
+
+    @if (items().length === 0) {
+      <p class="mt-4 text-sm text-slate-500">{{ 'inventory.emptyItems' | t }}</p>
+    } @else {
+      <ul class="mt-4 space-y-2">
+        @for (entry of items(); track entry.id) {
+          <li class="rounded-xl border border-white/70 bg-white/80 px-4 py-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p class="text-sm font-bold text-slate-900">
+                  {{ entry.item.slug | l10n: 'item' : entry.item.name }}
+                </p>
+                <p class="text-xs text-slate-500">
+                  {{ entry.item.type | l10n: 'itemType' : entry.item.type }} � {{ entry.item.slug }}
+                </p>
+              </div>
+              <span class="pack-pill">x{{ entry.quantity }}</span>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </article>
+</section>

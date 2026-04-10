@@ -1,0 +1,71 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE/editor
+.idea/
+.vscode/
+*.iml
+*.launch
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+.settings/
+*.sublime-workspace
+**/.history/
+
+# Node dependencies
+**/node_modules/
+
+# Build output
+**/dist/
+**/build/
+**/out/
+**/out-tsc/
+**/bazel-out/
+**/.angular/
+**/.angular/cache/
+
+# Test and coverage
+**/coverage/
+**/.nyc_output/
+
+# Logs
+**/logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime/temp/cache
+**/tmp/
+**/.tmp/
+**/.temp/
+**/.cache/
+**/.sass-cache/
+**/typings/
+**/__screenshots__/
+connect.lock
+libpeerconnection.log
+testem.log
+*.pid
+*.seed
+*.pid.lock
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Environment files
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!.env.*.example
