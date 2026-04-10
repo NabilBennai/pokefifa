@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { finalize, firstValueFrom } from 'rxjs';
 import { LanguageService } from '../../core/i18n/language.service';
-import { OpenPackResponse, PackHistoryItem, UserPackListItem } from '../../core/models/pack.models';
+import { PackHistoryItem, PackOpenReward, UserPackListItem } from '../../core/models/pack.models';
 import { PacksService } from '../../core/services/packs.service';
 import { PokemonCardComponent } from '../../shared/components/pokemon-card/pokemon-card.component';
 import { L10nPipe } from '../../shared/pipes/l10n.pipe';
@@ -22,12 +22,14 @@ export class PacksPageComponent {
   protected readonly loadingHistory = signal(false);
   protected readonly packsError = signal<string | null>(null);
   protected readonly openingPackId = signal<string | null>(null);
+  protected readonly openingAllPacks = signal(false);
   protected readonly openingModalOpen = signal(false);
   protected readonly openingModalRevealed = signal(false);
   protected readonly openingModalTitle = signal<string>('Opening pack...');
+  protected readonly openingModalSubtitle = signal<string>('');
   protected readonly packs = signal<UserPackListItem[]>([]);
   protected readonly packHistory = signal<PackHistoryItem[]>([]);
-  protected readonly openedResult = signal<OpenPackResponse | null>(null);
+  protected readonly openingRewards = signal<PackOpenReward[]>([]);
 
   constructor() {
     this.loadPacks();
@@ -65,7 +67,7 @@ export class PacksPageComponent {
 
   protected openPack(packId: string): void {
     const pack = this.packs().find((p) => p.id === packId);
-    if (this.openingPackId()) {
+    if (this.openingPackId() || this.openingAllPacks()) {
       return;
     }
 
@@ -74,12 +76,31 @@ export class PacksPageComponent {
       ? this.localized('pack', pack.packDefinition.slug, pack.packDefinition.name)
       : fallbackTitle;
     this.openingModalTitle.set(packName);
+    this.openingModalSubtitle.set(packName);
+    this.openingRewards.set([]);
     this.openingModalRevealed.set(false);
     this.openingModalOpen.set(true);
     this.openingPackId.set(packId);
     this.packsError.set(null);
 
     void this.performPackOpening(packId);
+  }
+
+  protected openAllPacks(): void {
+    const packIds = this.packs().map((pack) => pack.id);
+    if (packIds.length === 0 || this.openingPackId() || this.openingAllPacks()) {
+      return;
+    }
+
+    this.openingModalTitle.set(this.languageService.t('packs.openingAll'));
+    this.openingModalSubtitle.set('');
+    this.openingRewards.set([]);
+    this.openingModalRevealed.set(false);
+    this.openingModalOpen.set(true);
+    this.openingAllPacks.set(true);
+    this.packsError.set(null);
+
+    void this.performOpenAllPacks(packIds);
   }
 
   protected closeOpeningModal(): void {
@@ -93,7 +114,7 @@ export class PacksPageComponent {
         setTimeout(() => resolve(), 1400);
       });
       const [result] = await Promise.all([resultPromise, revealDelay]);
-      this.openedResult.set(result);
+      this.openingRewards.set(result.rewards);
       this.openingModalRevealed.set(true);
       this.packs.update((current) => current.filter((pack) => pack.id !== packId));
       this.loadPackHistory();
@@ -103,6 +124,30 @@ export class PacksPageComponent {
       this.openingModalOpen.set(false);
     } finally {
       this.openingPackId.set(null);
+    }
+  }
+
+  private async performOpenAllPacks(packIds: string[]): Promise<void> {
+    try {
+      const allRewards: PackOpenReward[] = [];
+      for (const packId of packIds) {
+        const result = await firstValueFrom(this.packsService.openPack(packId));
+        allRewards.push(...result.rewards);
+      }
+
+      this.openingModalSubtitle.set(
+        this.languageService.t('packs.openAllSummary', { count: packIds.length }),
+      );
+      this.openingRewards.set(allRewards);
+      this.openingModalRevealed.set(true);
+      this.packs.set([]);
+      this.loadPackHistory();
+    } catch (error) {
+      const httpError = error as HttpErrorResponse;
+      this.packsError.set(httpError.error?.message ?? 'Pack opening failed.');
+      this.openingModalOpen.set(false);
+    } finally {
+      this.openingAllPacks.set(false);
     }
   }
 

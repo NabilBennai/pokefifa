@@ -255,7 +255,7 @@ export class PacksService {
       throw new BadRequestException('Pack already opened.');
     }
 
-    const creatureRewardCount = this.getPositiveIntEnv('PACK_OPEN_CREATURE_REWARDS', 1);
+    const creatureRewardCount = this.getPositiveIntEnv('PACK_OPEN_CREATURE_REWARDS', 5);
     const itemRewardCount = this.getPositiveIntEnv('PACK_OPEN_ITEM_REWARDS', 1);
 
     const result = await this.prisma.$transaction(async (tx) => {

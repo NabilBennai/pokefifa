@@ -16,9 +16,23 @@
           <h2 class="text-xl font-bold text-slate-900">{{ 'packs.unopened' | t }}</h2>
           <p class="mt-1 text-sm text-slate-600">{{ 'packs.ready' | t }}</p>
         </div>
-        <button type="button" class="btn-poke-soft px-3 py-2 text-xs" (click)="loadPacks()">
-          {{ 'common.refresh' | t }}
-        </button>
+        <div class="flex gap-2">
+          <button type="button" class="btn-poke-soft px-3 py-2 text-xs" (click)="loadPacks()">
+            {{ 'common.refresh' | t }}
+          </button>
+          <button
+            type="button"
+            class="btn-poke px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60"
+            [disabled]="packs().length === 0 || openingPackId() !== null || openingAllPacks()"
+            (click)="openAllPacks()"
+          >
+            @if (openingAllPacks()) {
+              {{ 'packs.openingAllInProgress' | t }}
+            } @else {
+              {{ 'packs.openAllAction' | t }}
+            }
+          </button>
+        </div>
       </div>
 
       @if (packsError()) {
@@ -48,7 +62,7 @@
               </div>
               <button
                 type="button"
-                [disabled]="openingPackId() !== null"
+                [disabled]="openingPackId() !== null || openingAllPacks()"
                 class="btn-poke px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60"
                 (click)="openPack(pack.id)"
               >
@@ -112,7 +126,9 @@
   <div
     class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
   >
-    <div class="w-full max-w-lg rounded-3xl border border-white/35 bg-white/95 p-6 shadow-2xl">
+    <div
+      class="w-full max-h-[88vh] max-w-6xl overflow-y-auto rounded-3xl border border-white/35 bg-white/95 p-6 shadow-2xl"
+    >
       @if (!openingModalRevealed()) {
         <div class="space-y-5 py-4 text-center">
           <p class="text-sm font-semibold uppercase tracking-widest text-brand-700">
@@ -138,16 +154,17 @@
             <p class="text-sm font-semibold uppercase tracking-widest text-brand-700">
               {{ 'packs.rewardsRevealed' | t }}
             </p>
-            <p class="mt-1 text-lg font-bold text-slate-900">
-              {{
-                openedResult()?.pack?.slug ?? '' | l10n: 'pack' : openedResult()?.pack?.name ?? ''
-              }}
-            </p>
+            <p class="mt-1 text-lg font-bold text-slate-900">{{ openingModalSubtitle() }}</p>
           </div>
 
-          <div class="grid gap-3 sm:grid-cols-2">
-            @for (reward of openedResult()?.rewards ?? []; track reward.id) {
-              <div class="rounded-2xl border border-slate-200 bg-white p-3">
+          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            @for (reward of openingRewards(); track reward.id) {
+              <div
+                class="rounded-2xl border border-slate-200 bg-white p-3"
+                [class.border-0]="reward.rewardType === 'CREATURE' && !!reward.species"
+                [class.bg-transparent]="reward.rewardType === 'CREATURE' && !!reward.species"
+                [class.p-0]="reward.rewardType === 'CREATURE' && !!reward.species"
+              >
                 @if (reward.rewardType === 'CREATURE' && reward.species) {
                   <app-pokemon-card
                     [rewardSpecies]="reward.species"

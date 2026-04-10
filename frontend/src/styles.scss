@@ -170,6 +170,24 @@
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / 60%);
   }
 
+  .tcg-card-compact {
+    aspect-ratio: 1 / 1.618;
+    max-width: 20rem;
+    margin-inline: auto;
+  }
+
+  .tcg-card-compact .tcg-header h3 {
+    font-size: 0.82rem;
+  }
+
+  .tcg-card-compact .tcg-type-chip {
+    font-size: 0.58rem;
+  }
+
+  .tcg-art-compact {
+    height: 7.25rem;
+  }
+
   .tcg-rule {
     @apply relative z-10 h-px bg-black/35;
   }
