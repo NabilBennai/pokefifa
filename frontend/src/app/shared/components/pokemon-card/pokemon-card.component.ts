@@ -33,6 +33,37 @@ export class PokemonCardComponent {
   protected readonly primaryTypeClass = computed<string>(() =>
     this.frameTone(this.species()?.primaryType ?? 'default'),
   );
+  protected readonly displayedMoves = computed<
+    Array<{ slug: string; name: string; type: string; power: number | null }>
+  >(() => {
+    const creature = this.creature();
+    if (creature && creature.learnedMoves.length > 0) {
+      return [...creature.learnedMoves]
+        .sort((a, b) => a.slot - b.slot)
+        .slice(0, 2)
+        .map((entry) => ({
+          slug: entry.move.slug,
+          name: entry.move.name,
+          type: entry.move.type,
+          power: entry.move.power,
+        }));
+    }
+
+    const species = this.species();
+    if (!species) {
+      return [];
+    }
+
+    return [
+      { slug: 'strike', name: 'Strike', type: species.primaryType, power: species.baseAttack },
+      {
+        slug: 'special-burst',
+        name: 'Special Burst',
+        type: species.primaryType,
+        power: species.baseSpAttack,
+      },
+    ];
+  });
 
   protected rarityTone(rarity: MyCreatureItem['species']['rarity'] | undefined): string {
     switch (rarity) {
@@ -158,6 +189,10 @@ export class PokemonCardComponent {
       creature.species.baseSpDefense +
       creature.species.baseSpeed
     );
+  }
+
+  protected movePower(power: number | null): string {
+    return power === null ? '--' : String(power);
   }
 
   protected spriteUrl(slug: string): string {

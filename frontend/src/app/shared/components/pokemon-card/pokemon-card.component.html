@@ -65,14 +65,12 @@
       <div class="tcg-rule mt-3"></div>
 
       <div class="mt-3 space-y-2">
-        <div class="tcg-move-row">
-          <p class="tcg-move-name">{{ 'Strike' | t }}</p>
-          <p class="tcg-move-damage">{{ s.baseAttack }}</p>
-        </div>
-        <div class="tcg-move-row">
-          <p class="tcg-move-name">{{ 'Special Burst' | t }}</p>
-          <p class="tcg-move-damage">{{ s.baseSpAttack }}</p>
-        </div>
+        @for (move of displayedMoves(); track move.slug) {
+          <div class="tcg-move-row">
+            <p class="tcg-move-name">{{ move.slug | l10n: 'move' : move.name }}</p>
+            <p class="tcg-move-damage">{{ movePower(move.power) }}</p>
+          </div>
+        }
       </div>
 
       <div class="mt-3 grid grid-cols-3 gap-2 text-center">

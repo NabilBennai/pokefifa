@@ -40,6 +40,8 @@ export class MyClubPageComponent {
   protected readonly maxLevelFilter = signal<number | null>(null);
   protected readonly sortBy = signal<'name' | 'level' | 'power' | 'rarity' | 'newest'>('power');
   protected readonly sortDirection = signal<'asc' | 'desc'>('desc');
+  protected readonly pageSize = signal(12);
+  protected readonly currentPage = signal(1);
 
   protected readonly typeOptions = computed(() => {
     const types = new Set<string>();
@@ -136,6 +138,37 @@ export class MyClubPageComponent {
     return list;
   });
 
+  protected readonly totalPages = computed(() => {
+    return Math.max(1, Math.ceil(this.filteredCreatures().length / this.pageSize()));
+  });
+
+  protected readonly currentPageSafe = computed(() => {
+    return Math.max(1, Math.min(this.currentPage(), this.totalPages()));
+  });
+
+  protected readonly paginatedCreatures = computed(() => {
+    const page = this.currentPageSafe();
+    const size = this.pageSize();
+    const start = (page - 1) * size;
+    return this.filteredCreatures().slice(start, start + size);
+  });
+
+  protected readonly paginationFrom = computed(() => {
+    const total = this.filteredCreatures().length;
+    if (total === 0) {
+      return 0;
+    }
+    return (this.currentPageSafe() - 1) * this.pageSize() + 1;
+  });
+
+  protected readonly paginationTo = computed(() => {
+    const total = this.filteredCreatures().length;
+    if (total === 0) {
+      return 0;
+    }
+    return Math.min(this.currentPageSafe() * this.pageSize(), total);
+  });
+
   constructor() {
     this.loadCreatures();
   }
@@ -146,6 +179,7 @@ export class MyClubPageComponent {
     this.creaturesService.getMyCreatures().subscribe({
       next: (response) => {
         this.creatures.set(response.creatures);
+        this.currentPage.set(1);
         if (this.selectedCreatureId()) {
           const refreshed = response.creatures.find((c) => c.id === this.selectedCreatureId());
           if (refreshed) {
@@ -275,42 +309,50 @@ export class MyClubPageComponent {
 
   protected setSearchQuery(value: string): void {
     this.searchQuery.set(value);
+    this.currentPage.set(1);
   }
 
   protected setRarityFilter(value: string): void {
     if (value === 'ALL') {
       this.rarityFilter.set('ALL');
+      this.currentPage.set(1);
       return;
     }
 
     const valid = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'] as const;
     if (valid.includes(value as (typeof valid)[number])) {
       this.rarityFilter.set(value as MyCreatureItem['species']['rarity']);
+      this.currentPage.set(1);
     }
   }
 
   protected setTypeFilter(value: string): void {
     this.typeFilter.set(value === 'ALL' ? 'ALL' : value);
+    this.currentPage.set(1);
   }
 
   protected setMinLevelFilter(raw: string): void {
     this.minLevelFilter.set(this.parseLevelFilter(raw));
+    this.currentPage.set(1);
   }
 
   protected setMaxLevelFilter(raw: string): void {
     this.maxLevelFilter.set(this.parseLevelFilter(raw));
+    this.currentPage.set(1);
   }
 
   protected setSortBy(value: string): void {
     const valid = ['name', 'level', 'power', 'rarity', 'newest'] as const;
     if (valid.includes(value as (typeof valid)[number])) {
       this.sortBy.set(value as 'name' | 'level' | 'power' | 'rarity' | 'newest');
+      this.currentPage.set(1);
     }
   }
 
   protected setSortDirection(value: string): void {
     if (value === 'asc' || value === 'desc') {
       this.sortDirection.set(value);
+      this.currentPage.set(1);
     }
   }
 
@@ -322,6 +364,20 @@ export class MyClubPageComponent {
     this.maxLevelFilter.set(null);
     this.sortBy.set('power');
     this.sortDirection.set('desc');
+    this.currentPage.set(1);
+  }
+
+  protected goToPage(page: number): void {
+    const normalized = Math.max(1, Math.min(page, this.totalPages()));
+    this.currentPage.set(normalized);
+  }
+
+  protected goToPreviousPage(): void {
+    this.goToPage(this.currentPageSafe() - 1);
+  }
+
+  protected goToNextPage(): void {
+    this.goToPage(this.currentPageSafe() + 1);
   }
 
   private translateMoveName(slug: string, fallback: string): string {
