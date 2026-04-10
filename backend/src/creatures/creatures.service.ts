@@ -60,6 +60,24 @@ export class CreaturesService {
           },
           orderBy: [{ slot: 'asc' }],
         },
+        pendingMoves: {
+          select: {
+            id: true,
+            unlockLevel: true,
+            createdAt: true,
+            move: {
+              select: {
+                id: true,
+                slug: true,
+                name: true,
+                type: true,
+                power: true,
+                accuracy: true,
+              },
+            },
+          },
+          orderBy: [{ createdAt: 'asc' }],
+        },
       },
       orderBy: [
         {
@@ -156,6 +174,108 @@ export class CreaturesService {
       success: true,
       creatureId: creature.id,
       moveIds: uniqueMoveIds,
+    };
+  }
+
+  async resolvePendingMove(
+    userId: string,
+    creatureId: string,
+    pendingMoveId: string,
+    replaceMoveId?: string,
+    skip = false,
+  ) {
+    const creature = await this.prisma.userCreature.findFirst({
+      where: {
+        id: creatureId,
+        userId,
+      },
+      select: {
+        id: true,
+      },
+    });
+    if (!creature) {
+      throw new NotFoundException('Creature not found.');
+    }
+
+    const pending = await this.prisma.userCreaturePendingMove.findFirst({
+      where: {
+        id: pendingMoveId,
+        userCreatureId: creature.id,
+      },
+      select: {
+        id: true,
+        moveId: true,
+      },
+    });
+    if (!pending) {
+      throw new NotFoundException('Pending move not found.');
+    }
+
+    const learnedMoves = await this.prisma.userCreatureMove.findMany({
+      where: {
+        userCreatureId: creature.id,
+      },
+      select: {
+        id: true,
+        slot: true,
+        moveId: true,
+      },
+      orderBy: [{ slot: 'asc' }],
+    });
+
+    const alreadyLearned = learnedMoves.some((entry) => entry.moveId === pending.moveId);
+    if (skip || alreadyLearned) {
+      await this.prisma.userCreaturePendingMove.delete({
+        where: { id: pending.id },
+      });
+      return {
+        success: true,
+        creatureId: creature.id,
+        pendingMoveId: pending.id,
+        action: alreadyLearned ? 'ALREADY_LEARNED' : 'SKIPPED',
+      };
+    }
+
+    if (learnedMoves.length >= 4 && !replaceMoveId) {
+      throw new BadRequestException('A replacement move is required because all 4 slots are full.');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      if (replaceMoveId) {
+        const toReplace = learnedMoves.find((entry) => entry.moveId === replaceMoveId);
+        if (!toReplace) {
+          throw new BadRequestException('Selected replacement move is not currently learned.');
+        }
+
+        await tx.userCreatureMove.update({
+          where: { id: toReplace.id },
+          data: {
+            moveId: pending.moveId,
+          },
+        });
+      } else {
+        const nextSlot = (learnedMoves[learnedMoves.length - 1]?.slot ?? 0) + 1;
+        await tx.userCreatureMove.create({
+          data: {
+            userCreatureId: creature.id,
+            moveId: pending.moveId,
+            slot: nextSlot,
+          },
+        });
+      }
+
+      await tx.userCreaturePendingMove.delete({
+        where: {
+          id: pending.id,
+        },
+      });
+    });
+
+    return {
+      success: true,
+      creatureId: creature.id,
+      pendingMoveId: pending.id,
+      action: replaceMoveId ? 'REPLACED' : 'LEARNED',
     };
   }
 }

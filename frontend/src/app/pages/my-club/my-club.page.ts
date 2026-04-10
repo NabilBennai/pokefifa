@@ -31,8 +31,10 @@ export class MyClubPageComponent {
   protected readonly selectedCreatureId = signal<string | null>(null);
   protected readonly editableMoveIds = signal<string[]>([]);
   protected readonly savingMoves = signal(false);
+  protected readonly resolvingPendingMoveId = signal<string | null>(null);
   protected readonly moveEditorError = signal<string | null>(null);
   protected readonly moveEditorSuccess = signal<string | null>(null);
+  protected readonly pendingReplacementByMoveId = signal<Record<string, string>>({});
   protected readonly searchQuery = signal('');
   protected readonly rarityFilter = signal<'ALL' | MyCreatureItem['species']['rarity']>('ALL');
   protected readonly typeFilter = signal<'ALL' | string>('ALL');
@@ -199,6 +201,12 @@ export class MyClubPageComponent {
     if (this.editableMoveIds().length === 0 && creature.availableMoves.length > 0) {
       this.editableMoveIds.set([creature.availableMoves[0].id]);
     }
+    const replacements: Record<string, string> = {};
+    const fallbackMoveId = creature.learnedMoves[0]?.move.id ?? '';
+    for (const pending of creature.pendingMoves) {
+      replacements[pending.id] = fallbackMoveId;
+    }
+    this.pendingReplacementByMoveId.set(replacements);
     this.moveEditorError.set(null);
     this.moveEditorSuccess.set(null);
   }
@@ -206,6 +214,7 @@ export class MyClubPageComponent {
   protected closeMoveEditor(): void {
     this.selectedCreatureId.set(null);
     this.editableMoveIds.set([]);
+    this.pendingReplacementByMoveId.set({});
     this.moveEditorError.set(null);
     this.moveEditorSuccess.set(null);
   }
@@ -289,6 +298,70 @@ export class MyClubPageComponent {
         },
         error: (error: HttpErrorResponse) => {
           this.moveEditorError.set(error.error?.message ?? 'Could not save moves.');
+        },
+      });
+  }
+
+  protected canLearnPendingWithoutReplace(creature: MyCreatureItem): boolean {
+    return creature.learnedMoves.length < 4;
+  }
+
+  protected pendingReplacementMoveId(pendingMoveId: string): string {
+    return this.pendingReplacementByMoveId()[pendingMoveId] ?? '';
+  }
+
+  protected setPendingReplacementMoveId(pendingMoveId: string, moveId: string): void {
+    this.pendingReplacementByMoveId.update((current) => ({
+      ...current,
+      [pendingMoveId]: moveId,
+    }));
+    this.moveEditorError.set(null);
+    this.moveEditorSuccess.set(null);
+  }
+
+  protected learnPendingMove(creature: MyCreatureItem, pendingMoveId: string): void {
+    const replaceMoveId = this.canLearnPendingWithoutReplace(creature)
+      ? undefined
+      : this.pendingReplacementMoveId(pendingMoveId) || undefined;
+
+    if (!this.canLearnPendingWithoutReplace(creature) && !replaceMoveId) {
+      this.moveEditorError.set('Select a move to replace.');
+      return;
+    }
+
+    this.resolvingPendingMoveId.set(pendingMoveId);
+    this.moveEditorError.set(null);
+    this.moveEditorSuccess.set(null);
+
+    this.creaturesService
+      .resolvePendingMove(creature.id, pendingMoveId, { replaceMoveId })
+      .pipe(finalize(() => this.resolvingPendingMoveId.set(null)))
+      .subscribe({
+        next: () => {
+          this.moveEditorSuccess.set('Move learned successfully.');
+          this.loadCreatures();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.moveEditorError.set(error.error?.message ?? 'Could not learn the pending move.');
+        },
+      });
+  }
+
+  protected skipPendingMove(creature: MyCreatureItem, pendingMoveId: string): void {
+    this.resolvingPendingMoveId.set(pendingMoveId);
+    this.moveEditorError.set(null);
+    this.moveEditorSuccess.set(null);
+
+    this.creaturesService
+      .resolvePendingMove(creature.id, pendingMoveId, { skip: true })
+      .pipe(finalize(() => this.resolvingPendingMoveId.set(null)))
+      .subscribe({
+        next: () => {
+          this.moveEditorSuccess.set('Pending move ignored.');
+          this.loadCreatures();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.moveEditorError.set(error.error?.message ?? 'Could not skip the pending move.');
         },
       });
   }

@@ -193,6 +193,11 @@
         @for (creature of paginatedCreatures(); track creature.id) {
           <div class="space-y-2">
             <app-pokemon-card [creature]="creature" />
+            @if (creature.pendingMoves.length > 0) {
+              <p class="rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-800">
+                {{ creature.pendingMoves.length }} {{ 'myClub.pendingMovesBadge' | t }}
+              </p>
+            }
             <button
               type="button"
               class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-red-300 hover:text-red-700"
@@ -235,6 +240,68 @@
 
         <div class="mt-5 grid gap-5 lg:grid-cols-[1fr_auto]">
           <div class="space-y-3">
+            @if (selected.pendingMoves.length > 0) {
+              <div class="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <p class="text-xs font-bold uppercase tracking-[0.12em] text-amber-800">
+                  {{ 'myClub.pendingMovesTitle' | t }}
+                </p>
+                <p class="mt-1 text-xs text-amber-900">
+                  {{ 'myClub.pendingMovesHint' | t }}
+                </p>
+
+                <div class="mt-3 space-y-2">
+                  @for (pending of selected.pendingMoves; track pending.id) {
+                    <div class="rounded-lg border border-amber-300 bg-white p-2">
+                      <p class="text-sm font-bold text-slate-900">
+                        {{ moveName(pending.move.slug, pending.move.name) }}
+                        <span class="text-xs font-semibold text-slate-500">
+                          (Lv {{ pending.unlockLevel }})
+                        </span>
+                      </p>
+                      <p class="mt-0.5 text-[11px] text-slate-600">
+                        {{ pending.move.type | l10n: 'type' : pending.move.type }}
+                        - Pow {{ pending.move.power ?? '--' }} - Acc {{ pending.move.accuracy ?? '--' }}
+                      </p>
+
+                      @if (!canLearnPendingWithoutReplace(selected)) {
+                        <select
+                          class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+                          [value]="pendingReplacementMoveId(pending.id)"
+                          (change)="setPendingReplacementMoveId(pending.id, $any($event.target).value)"
+                        >
+                          @for (learned of selected.learnedMoves; track learned.move.id) {
+                            <option [value]="learned.move.id">
+                              {{ 'myClub.replaceMoveLabel' | t }}:
+                              {{ moveName(learned.move.slug, learned.move.name) }}
+                            </option>
+                          }
+                        </select>
+                      }
+
+                      <div class="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          class="btn-poke px-3 py-1.5 text-[11px] disabled:opacity-40"
+                          [disabled]="resolvingPendingMoveId() === pending.id"
+                          (click)="learnPendingMove(selected, pending.id)"
+                        >
+                          {{ 'myClub.learnPendingMove' | t }}
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-poke-soft px-3 py-1.5 text-[11px] disabled:opacity-40"
+                          [disabled]="resolvingPendingMoveId() === pending.id"
+                          (click)="skipPendingMove(selected, pending.id)"
+                        >
+                          {{ 'myClub.skipPendingMove' | t }}
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
             @for (moveId of editableMoveIds(); track $index) {
               <div class="rounded-xl border border-slate-200 bg-white p-3">
                 <div class="flex items-center justify-between gap-2">

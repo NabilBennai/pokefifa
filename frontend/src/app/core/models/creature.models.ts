@@ -39,6 +39,19 @@ export type MyCreatureItem = {
     power: number | null;
     accuracy: number | null;
   }>;
+  pendingMoves: Array<{
+    id: string;
+    unlockLevel: number;
+    createdAt: string;
+    move: {
+      id: string;
+      slug: string;
+      name: string;
+      type: string;
+      power: number | null;
+      accuracy: number | null;
+    };
+  }>;
 };
 
 export type MyCreaturesResponse = {
@@ -50,4 +63,11 @@ export type UpdateCreatureMovesResponse = {
   success: boolean;
   creatureId: string;
   moveIds: string[];
+};
+
+export type ResolvePendingMoveResponse = {
+  success: boolean;
+  creatureId: string;
+  pendingMoveId: string;
+  action: 'LEARNED' | 'REPLACED' | 'SKIPPED' | 'ALREADY_LEARNED';
 };

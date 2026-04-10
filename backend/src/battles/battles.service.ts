@@ -61,6 +61,8 @@ type CreatureBattleProgress = {
   xpBefore: number;
   xpAfter: number;
   xpGained: number;
+  learnedMoveIds: string[];
+  pendingMoveIds: string[];
 };
 
 type BattleItemCategory = 'HEAL' | 'REVIVE' | 'BOOST' | 'STATUS';
@@ -2094,6 +2096,28 @@ export class BattlesService {
           select: {
             name: true,
             slug: true,
+            moves: {
+              select: {
+                unlockLevel: true,
+                isDefault: true,
+                moveId: true,
+              },
+              orderBy: [{ unlockLevel: 'asc' }],
+            },
+          },
+        },
+        learnedMoves: {
+          select: {
+            id: true,
+            slot: true,
+            moveId: true,
+          },
+          orderBy: [{ slot: 'asc' }],
+        },
+        pendingMoves: {
+          select: {
+            id: true,
+            moveId: true,
           },
         },
       },
@@ -2118,6 +2142,8 @@ export class BattlesService {
       let level = creature.level;
       let xp = creature.xp;
       let remainingGain = totalGain;
+      const learnedMoveIds = [...creature.learnedMoves].map((entry) => entry.moveId);
+      const pendingMoveIds = [...creature.pendingMoves].map((entry) => entry.moveId);
 
       while (remainingGain > 0 && level < 100) {
         const expToNext = this.getExpToNextLevel(level);
@@ -2151,6 +2177,39 @@ export class BattlesService {
         },
       });
 
+      const newlyUnlockedMoves = creature.species.moves.filter(
+        (entry) =>
+          !entry.isDefault &&
+          entry.unlockLevel > creature.level &&
+          entry.unlockLevel <= level &&
+          !learnedMoveIds.includes(entry.moveId) &&
+          !pendingMoveIds.includes(entry.moveId),
+      );
+
+      let slotCursor = creature.learnedMoves.length;
+      for (const unlocked of newlyUnlockedMoves) {
+        if (slotCursor < 4) {
+          slotCursor += 1;
+          await tx.userCreatureMove.create({
+            data: {
+              userCreatureId: creature.id,
+              moveId: unlocked.moveId,
+              slot: slotCursor,
+            },
+          });
+          learnedMoveIds.push(unlocked.moveId);
+        } else {
+          await tx.userCreaturePendingMove.create({
+            data: {
+              userCreatureId: creature.id,
+              moveId: unlocked.moveId,
+              unlockLevel: unlocked.unlockLevel,
+            },
+          });
+          pendingMoveIds.push(unlocked.moveId);
+        }
+      }
+
       progress.push({
         creatureId: creature.id,
         name: creature.species.name,
@@ -2160,6 +2219,8 @@ export class BattlesService {
         xpBefore: creature.xp,
         xpAfter: xp,
         xpGained: totalGain,
+        learnedMoveIds,
+        pendingMoveIds,
       });
     }
 

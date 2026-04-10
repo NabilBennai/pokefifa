@@ -1,7 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { MyCreaturesResponse, UpdateCreatureMovesResponse } from '../models/creature.models';
+import {
+  MyCreaturesResponse,
+  ResolvePendingMoveResponse,
+  UpdateCreatureMovesResponse,
+} from '../models/creature.models';
 import { API_BASE_URL } from '../tokens/api-base-url.token';
 
 @Injectable({ providedIn: 'root' })
@@ -20,6 +24,17 @@ export class CreaturesService {
     return this.http.patch<UpdateCreatureMovesResponse>(
       `${this.apiBaseUrl}/creatures/${creatureId}/moves`,
       { moveIds },
+    );
+  }
+
+  resolvePendingMove(
+    creatureId: string,
+    pendingMoveId: string,
+    payload: { replaceMoveId?: string; skip?: boolean },
+  ): Observable<ResolvePendingMoveResponse> {
+    return this.http.post<ResolvePendingMoveResponse>(
+      `${this.apiBaseUrl}/creatures/${creatureId}/pending-moves/${pendingMoveId}/resolve`,
+      payload,
     );
   }
 }

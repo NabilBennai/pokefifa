@@ -152,6 +152,7 @@ model Move {
   speciesMoves       SpeciesMove[]
   tmItems            InventoryItem[]    @relation("TmMove")
   learnedByCreatures UserCreatureMove[]
+  pendingByCreatures UserCreaturePendingMove[]
 
   @@index([name])
   @@index([type])
@@ -199,10 +200,26 @@ model UserCreature {
   species      CreatureSpecies    @relation(fields: [speciesId], references: [id])
   teamSlots    TeamSlot[]
   learnedMoves UserCreatureMove[]
+  pendingMoves UserCreaturePendingMove[]
 
   @@index([userId])
   @@index([speciesId])
   @@index([userId, speciesId])
+}
+
+model UserCreaturePendingMove {
+  id             String @id @default(cuid())
+  userCreatureId String
+  moveId         String
+  unlockLevel    Int
+  createdAt      DateTime @default(now())
+
+  userCreature UserCreature @relation(fields: [userCreatureId], references: [id], onDelete: Cascade)
+  move         Move         @relation(fields: [moveId], references: [id], onDelete: Cascade)
+
+  @@unique([userCreatureId, moveId])
+  @@index([userCreatureId])
+  @@index([moveId])
 }
 
 model UserCreatureMove {
