@@ -13,7 +13,6 @@ concurrency:
 jobs:
   deploy-frontend:
     name: Deploy frontend
-    if: ${{ secrets.VERCEL_TOKEN != '' && secrets.VERCEL_ORG_ID != '' && secrets.VERCEL_FRONTEND_PROJECT_ID != '' }}
     runs-on: ubuntu-latest
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -33,21 +32,35 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Check required secrets
+        id: secrets_check
+        shell: bash
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "Skipping frontend deploy: missing Vercel secrets."
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install Vercel CLI
+        if: ${{ steps.secrets_check.outputs.should_deploy == 'true' }}
         run: npm i -g vercel@latest
 
       - name: Pull Vercel environment
+        if: ${{ steps.secrets_check.outputs.should_deploy == 'true' }}
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
 
       - name: Build project artifacts
+        if: ${{ steps.secrets_check.outputs.should_deploy == 'true' }}
         run: vercel build --prod --token="$VERCEL_TOKEN"
 
       - name: Deploy to production
+        if: ${{ steps.secrets_check.outputs.should_deploy == 'true' }}
         run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
 
   deploy-backend:
     name: Deploy backend
-    if: ${{ secrets.VERCEL_TOKEN != '' && secrets.VERCEL_ORG_ID != '' && secrets.VERCEL_BACKEND_PROJECT_ID != '' }}
     runs-on: ubuntu-latest
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -67,14 +80,29 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
+      - name: Check required secrets
+        id: secrets_check
+        shell: bash
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "Skipping backend deploy: missing Vercel secrets."
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install Vercel CLI
+        if: ${{ steps.secrets_check.outputs.should_deploy == 'true' }}
         run: npm i -g vercel@latest
 
       - name: Pull Vercel environment
+        if: ${{ steps.secrets_check.outputs.should_deploy == 'true' }}
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
 
       - name: Build project artifacts
+        if: ${{ steps.secrets_check.outputs.should_deploy == 'true' }}
         run: vercel build --prod --token="$VERCEL_TOKEN"
 
       - name: Deploy to production
+        if: ${{ steps.secrets_check.outputs.should_deploy == 'true' }}
         run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
