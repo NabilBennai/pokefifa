@@ -85,6 +85,8 @@ export class BattlesController {
       dto.action,
       dto.moveIndex,
       dto.switchIndex,
+      dto.itemSlug,
+      dto.targetIndex,
     );
   }
 }

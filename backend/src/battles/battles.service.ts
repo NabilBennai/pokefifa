@@ -63,6 +63,30 @@ type CreatureBattleProgress = {
   xpGained: number;
 };
 
+type BattleItemCategory = 'HEAL' | 'REVIVE' | 'BOOST' | 'STATUS';
+
+type BattleItemEffect =
+  | { category: 'HEAL'; amount: number | 'FULL' }
+  | { category: 'REVIVE'; ratio: number }
+  | { category: 'BOOST'; stat: 'attack' | 'defense' | 'speed'; stages: number }
+  | { category: 'STATUS'; kind: 'CURE_STATUS' };
+
+type LiveBattleItem = {
+  slug: string;
+  name: string;
+  description: string | null;
+  quantity: number;
+  category: BattleItemCategory;
+  effect: BattleItemEffect;
+};
+
+type LiveBattleItemUsage = {
+  total: number;
+  heal: number;
+  revive: number;
+  boost: number;
+};
+
 type LiveBattleState = {
   status: 'IN_PROGRESS' | 'FINISHED';
   queue: 'AI' | 'RANKED';
@@ -85,7 +109,16 @@ type LiveBattleState = {
   ratingDelta?: number;
   result?: BattleResult;
   participantPlayerIndexes?: number[];
+  availableItems?: LiveBattleItem[];
+  itemUsage?: LiveBattleItemUsage;
 };
+
+const LIVE_BATTLE_ITEM_LIMITS = {
+  total: 3,
+  heal: 2,
+  revive: 1,
+  boost: 1,
+} as const;
 
 const MOVE_SELECT = {
   slug: true,
@@ -576,6 +609,13 @@ export class BattlesService {
       winner: null,
       opponentRating,
       participantPlayerIndexes: [0],
+      availableItems: await this.getBattleUsableItems(userId),
+      itemUsage: {
+        total: 0,
+        heal: 0,
+        revive: 0,
+        boost: 0,
+      },
     };
 
     const createdBattle = await this.prisma.battle.create({
@@ -612,9 +652,11 @@ export class BattlesService {
   async playLiveBattleTurn(
     userId: string,
     battleId: string,
-    action: 'MOVE' | 'SWITCH',
+    action: 'MOVE' | 'SWITCH' | 'ITEM',
     moveIndex?: number,
     switchIndex?: number,
+    itemSlug?: string,
+    targetIndex?: number,
   ) {
     const battle = await this.prisma.battle.findFirst({
       where: {
@@ -691,6 +733,107 @@ export class BattlesService {
         if (!state.mustPlayerSwitch) {
           state.turn += 1;
         }
+      }
+    } else if (action === 'ITEM') {
+      if (!playerActive || playerActive.currentHp <= 0) {
+        throw new BadRequestException('No active player creature available.');
+      }
+      const normalizedItemSlug = itemSlug?.trim();
+      if (!normalizedItemSlug) {
+        throw new BadRequestException('itemSlug is required for item action.');
+      }
+
+      const availableItem = state.availableItems?.find(
+        (entry) => entry.slug === normalizedItemSlug,
+      );
+      if (!availableItem || availableItem.quantity <= 0) {
+        throw new BadRequestException('This item is not available in your inventory.');
+      }
+
+      const usage = state.itemUsage ?? { total: 0, heal: 0, revive: 0, boost: 0 };
+      if (usage.total >= LIVE_BATTLE_ITEM_LIMITS.total) {
+        throw new BadRequestException('You reached the total item usage limit for this battle.');
+      }
+      if (availableItem.category === 'HEAL' && usage.heal >= LIVE_BATTLE_ITEM_LIMITS.heal) {
+        throw new BadRequestException('You reached the healing item limit for this battle.');
+      }
+      if (availableItem.category === 'REVIVE' && usage.revive >= LIVE_BATTLE_ITEM_LIMITS.revive) {
+        throw new BadRequestException('You reached the revive usage limit for this battle.');
+      }
+      if (availableItem.category === 'BOOST' && usage.boost >= LIVE_BATTLE_ITEM_LIMITS.boost) {
+        throw new BadRequestException('You reached the temporary boost limit for this battle.');
+      }
+
+      const itemOutcome = this.applyBattleItemEffect(
+        state,
+        availableItem,
+        state.activePlayerIndex,
+        targetIndex,
+      );
+      state.log.push(`Turn ${state.turn}:`);
+      state.log.push(itemOutcome.logLine);
+
+      const consumed = await this.consumeBattleItemInventory(userId, normalizedItemSlug);
+      if (!consumed) {
+        throw new BadRequestException('This item is no longer available in your inventory.');
+      }
+      availableItem.quantity = Math.max(0, availableItem.quantity - 1);
+
+      usage.total += 1;
+      if (availableItem.category === 'HEAL') {
+        usage.heal += 1;
+      } else if (availableItem.category === 'REVIVE') {
+        usage.revive += 1;
+      } else if (availableItem.category === 'BOOST') {
+        usage.boost += 1;
+      }
+      state.itemUsage = usage;
+
+      const aiMove = this.pickMove(opponentActive.moves);
+      const outcome = this.executeAttack(opponentActive, playerActive, aiMove);
+      state.log.push(`${opponentActive.name} used ${aiMove.name}. ${outcome}`);
+
+      if (playerActive.currentHp <= 0) {
+        state.log.push(`${playerActive.name} fainted.`);
+        state.mustPlayerSwitch = this.firstLivingIndex(state.playerTeam) >= 0;
+        if (state.mustPlayerSwitch) {
+          state.log.push('Choose your next PokÃ©mon.');
+        }
+      }
+
+      const livePlayer = state.playerTeam[state.activePlayerIndex];
+      const liveOpponent = state.opponentTeam[state.activeOpponentIndex];
+      if (livePlayer && livePlayer.currentHp > 0) {
+        const tick = this.applyEndTurnStatus(livePlayer);
+        if (tick) {
+          state.log.push(tick);
+          if (livePlayer.currentHp <= 0) {
+            state.log.push(`${livePlayer.name} fainted.`);
+            const nextPlayer = this.firstLivingIndex(state.playerTeam);
+            state.mustPlayerSwitch = nextPlayer >= 0;
+            if (state.mustPlayerSwitch) {
+              state.log.push('Choose your next PokÃ©mon.');
+            }
+          }
+        }
+      }
+      if (!state.mustPlayerSwitch && liveOpponent && liveOpponent.currentHp > 0) {
+        const tick = this.applyEndTurnStatus(liveOpponent);
+        if (tick) {
+          state.log.push(tick);
+          if (liveOpponent.currentHp <= 0) {
+            state.log.push(`${liveOpponent.name} fainted.`);
+            const nextOpponent = this.firstLivingIndex(state.opponentTeam);
+            state.activeOpponentIndex = nextOpponent;
+            if (nextOpponent >= 0) {
+              state.log.push(`Foe sent out ${state.opponentTeam[nextOpponent].name}!`);
+            }
+          }
+        }
+      }
+
+      if (!state.mustPlayerSwitch) {
+        state.turn += 1;
       }
     } else {
       if (!playerActive || playerActive.currentHp <= 0) {
@@ -806,6 +949,174 @@ export class BattlesService {
     });
 
     return this.toLiveBattleResponse(battle.id, state);
+  }
+
+  private async getBattleUsableItems(userId: string): Promise<LiveBattleItem[]> {
+    const userItems = await this.prisma.userInventoryItem.findMany({
+      where: {
+        userId,
+        quantity: { gt: 0 },
+      },
+      include: {
+        item: {
+          select: {
+            slug: true,
+            name: true,
+            description: true,
+          },
+        },
+      },
+      orderBy: [{ quantity: 'desc' }, { item: { name: 'asc' } }],
+    });
+
+    const mapped: LiveBattleItem[] = [];
+    for (const row of userItems) {
+      const effect = this.resolveBattleItemEffect(row.item.slug);
+      if (!effect) {
+        continue;
+      }
+      mapped.push({
+        slug: row.item.slug,
+        name: row.item.name,
+        description: row.item.description,
+        quantity: row.quantity,
+        category: effect.category,
+        effect,
+      });
+    }
+    return mapped;
+  }
+
+  private resolveBattleItemEffect(slug: string): BattleItemEffect | null {
+    const key = slug.trim().toLowerCase();
+    if (key === 'potion') {
+      return { category: 'HEAL', amount: 20 };
+    }
+    if (key === 'super_potion' || key === 'super-potion') {
+      return { category: 'HEAL', amount: 50 };
+    }
+    if (key === 'hyper_potion' || key === 'hyper-potion') {
+      return { category: 'HEAL', amount: 120 };
+    }
+    if (key === 'max_potion' || key === 'max-potion') {
+      return { category: 'HEAL', amount: 'FULL' };
+    }
+    if (key === 'revive') {
+      return { category: 'REVIVE', ratio: 0.5 };
+    }
+    if (key === 'full_heal' || key === 'full-heal') {
+      return { category: 'STATUS', kind: 'CURE_STATUS' };
+    }
+    if (key === 'x_attack' || key === 'x-attack') {
+      return { category: 'BOOST', stat: 'attack', stages: 1 };
+    }
+    if (key === 'x_defense' || key === 'x-defense') {
+      return { category: 'BOOST', stat: 'defense', stages: 1 };
+    }
+    if (key === 'x_speed' || key === 'x-speed') {
+      return { category: 'BOOST', stat: 'speed', stages: 1 };
+    }
+    return null;
+  }
+
+  private applyBattleItemEffect(
+    state: LiveBattleState,
+    item: LiveBattleItem,
+    activePlayerIndex: number,
+    targetIndex: number | undefined,
+  ): { logLine: string } {
+    const active = state.playerTeam[activePlayerIndex];
+    if (!active) {
+      throw new BadRequestException('No active player creature available.');
+    }
+
+    if (item.effect.category === 'HEAL') {
+      const target = targetIndex === undefined ? active : state.playerTeam[targetIndex];
+      if (!target) {
+        throw new BadRequestException('Invalid target for healing item.');
+      }
+      if (target.currentHp <= 0) {
+        throw new BadRequestException('Cannot heal a fainted creature.');
+      }
+      if (target.currentHp >= target.maxHp) {
+        throw new BadRequestException('Target creature already has full HP.');
+      }
+
+      const before = target.currentHp;
+      const healAmount =
+        item.effect.amount === 'FULL' ? target.maxHp : Math.max(1, item.effect.amount);
+      target.currentHp = Math.min(target.maxHp, target.currentHp + healAmount);
+      const restored = target.currentHp - before;
+      return {
+        logLine: `${active.name} used ${item.name} on ${target.name}. Restored ${restored} HP.`,
+      };
+    }
+
+    if (item.effect.category === 'REVIVE') {
+      if (targetIndex === undefined || targetIndex === null) {
+        throw new BadRequestException('targetIndex is required for revive item.');
+      }
+      const target = state.playerTeam[targetIndex];
+      if (!target) {
+        throw new BadRequestException('Invalid revive target.');
+      }
+      if (target.currentHp > 0) {
+        throw new BadRequestException('Revive can only be used on a fainted creature.');
+      }
+
+      const hpAfter = Math.max(1, Math.floor(target.maxHp * item.effect.ratio));
+      target.currentHp = hpAfter;
+      return {
+        logLine: `${active.name} used ${item.name}. ${target.name} was revived with ${hpAfter} HP.`,
+      };
+    }
+
+    if (item.effect.category === 'STATUS') {
+      const target = targetIndex === undefined ? active : state.playerTeam[targetIndex];
+      if (!target) {
+        throw new BadRequestException('Invalid target for status item.');
+      }
+      if (!target.statusCondition) {
+        throw new BadRequestException('Target has no status condition to cure.');
+      }
+      const previousStatus = target.statusCondition;
+      target.statusCondition = null;
+      return {
+        logLine: `${active.name} used ${item.name} on ${target.name}. ${previousStatus} was cured.`,
+      };
+    }
+
+    const boosted = this.modifyStage(active, item.effect.stat, item.effect.stages);
+    if (!boosted) {
+      throw new BadRequestException('Stat stage cannot be increased further.');
+    }
+
+    const statLabel =
+      item.effect.stat === 'attack'
+        ? 'Attack'
+        : item.effect.stat === 'defense'
+          ? 'Defense'
+          : 'Speed';
+    return {
+      logLine: `${active.name} used ${item.name}. ${active.name}'s ${statLabel} rose.`,
+    };
+  }
+
+  private async consumeBattleItemInventory(userId: string, itemSlug: string): Promise<boolean> {
+    const updated = await this.prisma.userInventoryItem.updateMany({
+      where: {
+        userId,
+        quantity: { gt: 0 },
+        item: {
+          slug: itemSlug,
+        },
+      },
+      data: {
+        quantity: { decrement: 1 },
+      },
+    });
+
+    return updated.count > 0;
   }
 
   private async resolveTeam(userId: string, requestedTeamId?: string): Promise<TeamData> {
@@ -1016,7 +1327,12 @@ export class BattlesService {
   private simulateBattle(teamA: CombatTeam, teamB: CombatTeam): SimulationResult {
     const log: string[] = [];
     const usedIndexesA = new Set<number>();
-    const defeatedOpponentsB: Array<{ name: string; slug: string; level: number; expYield: number }> = [];
+    const defeatedOpponentsB: Array<{
+      name: string;
+      slug: string;
+      level: number;
+      expYield: number;
+    }> = [];
     const defeatedOpponentRefs = new Set<Combatant>();
     const opponentRefs = new Set(teamB.combatants);
     let turns = 0;
@@ -1435,6 +1751,17 @@ export class BattlesService {
     if (!Array.isArray(state.participantPlayerIndexes)) {
       state.participantPlayerIndexes = [];
     }
+    if (!Array.isArray(state.availableItems)) {
+      state.availableItems = [];
+    }
+    if (!state.itemUsage) {
+      state.itemUsage = {
+        total: 0,
+        heal: 0,
+        revive: 0,
+        boost: 0,
+      };
+    }
     return state;
   }
 
@@ -1477,6 +1804,47 @@ export class BattlesService {
       rewards: state.rewards ?? null,
       creatureProgression: state.creatureProgression ?? [],
       ratingDelta: state.ratingDelta ?? null,
+      itemUsage: {
+        totalUsed: state.itemUsage?.total ?? 0,
+        totalLimit: LIVE_BATTLE_ITEM_LIMITS.total,
+        healUsed: state.itemUsage?.heal ?? 0,
+        healLimit: LIVE_BATTLE_ITEM_LIMITS.heal,
+        reviveUsed: state.itemUsage?.revive ?? 0,
+        reviveLimit: LIVE_BATTLE_ITEM_LIMITS.revive,
+        boostUsed: state.itemUsage?.boost ?? 0,
+        boostLimit: LIVE_BATTLE_ITEM_LIMITS.boost,
+      },
+      availableItems: (state.availableItems ?? [])
+        .filter((entry) => entry.quantity > 0)
+        .map((entry) => ({
+          slug: entry.slug,
+          name: entry.name,
+          description: entry.description,
+          quantity: entry.quantity,
+          category: entry.category,
+          effect:
+            entry.effect.category === 'HEAL'
+              ? {
+                  category: 'HEAL',
+                  amount: entry.effect.amount === 'FULL' ? null : entry.effect.amount,
+                  fullRestore: entry.effect.amount === 'FULL',
+                }
+              : entry.effect.category === 'REVIVE'
+                ? {
+                    category: 'REVIVE',
+                    reviveRatio: entry.effect.ratio,
+                  }
+                : entry.effect.category === 'BOOST'
+                  ? {
+                      category: 'BOOST',
+                      stat: entry.effect.stat,
+                      stages: entry.effect.stages,
+                    }
+                  : {
+                      category: 'STATUS',
+                      kind: entry.effect.kind,
+                    },
+        })),
       player: player
         ? {
             name: player.name,
@@ -1693,7 +2061,9 @@ export class BattlesService {
       return 0;
     }
     const trainerMultiplier = trainerBattle ? 1.5 : 1;
-    const raw = ((defeatedOpponent.expYield * defeatedOpponent.level) / (7 * participantsCount)) * trainerMultiplier;
+    const raw =
+      ((defeatedOpponent.expYield * defeatedOpponent.level) / (7 * participantsCount)) *
+      trainerMultiplier;
     return Math.max(1, Math.floor(raw));
   }
 

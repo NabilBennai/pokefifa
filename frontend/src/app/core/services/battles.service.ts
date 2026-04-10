@@ -59,9 +59,24 @@ export class BattlesService {
     });
   }
 
+  useLiveItem(
+    battleId: string,
+    itemSlug: string,
+    targetIndex?: number,
+  ): Observable<LiveBattleState> {
+    return this.playLiveAction(battleId, {
+      action: 'ITEM',
+      itemSlug,
+      targetIndex,
+    });
+  }
+
   private playLiveAction(
     battleId: string,
-    payload: { action: 'MOVE'; moveIndex: number } | { action: 'SWITCH'; switchIndex: number },
+    payload:
+      | { action: 'MOVE'; moveIndex: number }
+      | { action: 'SWITCH'; switchIndex: number }
+      | { action: 'ITEM'; itemSlug: string; targetIndex?: number },
   ): Observable<LiveBattleState> {
     return this.http.post<LiveBattleState>(`${this.apiBaseUrl}/battles/live/${battleId}/action`, {
       ...payload,

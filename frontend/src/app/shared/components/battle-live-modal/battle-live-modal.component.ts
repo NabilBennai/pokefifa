@@ -28,14 +28,17 @@ export class BattleLiveModalComponent implements OnChanges, OnDestroy {
   @Output() closed = new EventEmitter<void>();
   @Output() moveSelected = new EventEmitter<number>();
   @Output() switchSelected = new EventEmitter<number>();
+  @Output() itemSelected = new EventEmitter<{ itemSlug: string; targetIndex?: number }>();
   @Output() rematchRequested = new EventEmitter<void>();
   protected showSwitchPicker = false;
+  protected selectedReviveSlug: string | null = null;
   protected turnSecondsRemaining: number | null = null;
   private countdownTimer: ReturnType<typeof setInterval> | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['open'] && !this.open) {
       this.showSwitchPicker = false;
+      this.selectedReviveSlug = null;
     }
     if (changes['battle'] && this.battle?.mustPlayerSwitch) {
       this.showSwitchPicker = true;
@@ -92,6 +95,42 @@ export class BattleLiveModalComponent implements OnChanges, OnDestroy {
 
   protected closeSwitchPicker(): void {
     this.showSwitchPicker = false;
+  }
+
+  protected chooseItem(itemSlug: string, category: 'HEAL' | 'REVIVE' | 'BOOST' | 'STATUS'): void {
+    if (this.pending) {
+      return;
+    }
+    if (category === 'REVIVE') {
+      this.selectedReviveSlug = itemSlug;
+      return;
+    }
+    this.itemSelected.emit({ itemSlug });
+  }
+
+  protected chooseReviveTarget(index: number): void {
+    if (this.pending || !this.selectedReviveSlug) {
+      return;
+    }
+    this.itemSelected.emit({ itemSlug: this.selectedReviveSlug, targetIndex: index });
+    this.selectedReviveSlug = null;
+  }
+
+  protected cancelRevivePicker(): void {
+    this.selectedReviveSlug = null;
+  }
+
+  protected hasFaintedBench(battle: LiveBattleState | PvpBattleState): boolean {
+    if (this.isPvpBattle(battle)) {
+      return false;
+    }
+    return battle.playerRoster.some((member) => member.isFainted);
+  }
+
+  protected itemDisplayName(slug: string, fallback: string): string {
+    const key = `item.${slug.replace(/_/g, '-')}`;
+    const translated = this.languageService.t(key);
+    return translated === key ? fallback : translated;
   }
 
   protected close(): void {

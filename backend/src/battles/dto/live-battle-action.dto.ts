@@ -1,8 +1,8 @@
-import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class LiveBattleActionDto {
-  @IsIn(['MOVE', 'SWITCH'])
-  action!: 'MOVE' | 'SWITCH';
+  @IsIn(['MOVE', 'SWITCH', 'ITEM'])
+  action!: 'MOVE' | 'SWITCH' | 'ITEM';
 
   @IsOptional()
   @IsInt()
@@ -15,4 +15,14 @@ export class LiveBattleActionDto {
   @Min(0)
   @Max(5)
   switchIndex?: number;
+
+  @IsOptional()
+  @IsString()
+  itemSlug?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(5)
+  targetIndex?: number;
 }

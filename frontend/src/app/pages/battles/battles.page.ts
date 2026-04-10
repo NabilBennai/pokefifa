@@ -148,6 +148,34 @@ export class BattlesPageComponent {
       });
   }
 
+  protected playItem(payload: { itemSlug: string; targetIndex?: number }): void {
+    const battle = this.liveBattle();
+    if (!battle || battle.finished) {
+      return;
+    }
+
+    this.actionPending.set(true);
+    this.battlesService
+      .useLiveItem(battle.battleId, payload.itemSlug, payload.targetIndex)
+      .pipe(finalize(() => this.actionPending.set(false)))
+      .subscribe({
+        next: (state) => {
+          this.liveBattle.set(state);
+          if (state.finished) {
+            this.authService.refreshProfile().subscribe();
+            this.loadData();
+            setTimeout(() => {
+              this.liveOpen.set(false);
+              this.liveBattle.set(null);
+            }, 1000);
+          }
+        },
+        error: (error: HttpErrorResponse) => {
+          this.error.set(error.error?.message ?? 'Item action failed.');
+        },
+      });
+  }
+
   protected teamLabel(team: Team): string {
     return team.isDefault ? `${team.name} (Default)` : team.name;
   }

@@ -127,9 +127,7 @@ export class MyClubPageComponent {
       }
 
       if (sortBy === 'newest') {
-        return (
-          (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * direction
-        );
+        return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * direction;
       }
 
       return (this.computePower(a) - this.computePower(b)) * direction;

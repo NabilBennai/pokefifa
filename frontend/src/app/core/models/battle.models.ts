@@ -67,6 +67,42 @@ export type LiveBattleState = {
     xp: number;
   } | null;
   ratingDelta: number | null;
+  itemUsage: {
+    totalUsed: number;
+    totalLimit: number;
+    healUsed: number;
+    healLimit: number;
+    reviveUsed: number;
+    reviveLimit: number;
+    boostUsed: number;
+    boostLimit: number;
+  };
+  availableItems: Array<{
+    slug: string;
+    name: string;
+    description: string | null;
+    quantity: number;
+    category: 'HEAL' | 'REVIVE' | 'BOOST' | 'STATUS';
+    effect:
+      | {
+          category: 'HEAL';
+          amount: number | null;
+          fullRestore: boolean;
+        }
+      | {
+          category: 'REVIVE';
+          reviveRatio: number;
+        }
+      | {
+          category: 'BOOST';
+          stat: 'attack' | 'defense' | 'speed';
+          stages: number;
+        }
+      | {
+          category: 'STATUS';
+          kind: 'CURE_STATUS';
+        };
+  }>;
   player: {
     name: string;
     slug: string;
