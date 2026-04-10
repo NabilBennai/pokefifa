@@ -63,6 +63,8 @@ Important defaults in `.env.example`:
 - `DATABASE_URL=postgresql://pokefifa:pokefifa@localhost:5432/pokefifa`
 - `PACK_OPEN_CREATURE_REWARDS=5`
 - `PACK_OPEN_ITEM_REWARDS=1`
+- `SWAGGER_ENABLED=false`
+- `SWAGGER_PATH=internal/docs-admin-reference`
 
 ### 4. Install and run backend
 
@@ -140,6 +142,16 @@ The repository uses one CI workflow:
 - Frontend and backend include `vercel.json` configs.
 - No automated CD workflow is currently present in `.github/workflows`.
 - You can deploy manually using Vercel CLI or Vercel Git integration.
+
+## Private Swagger (Admin Only)
+
+Swagger is intentionally hidden and disabled by default.
+
+- Enable by setting `SWAGGER_ENABLED=true` in backend env
+- Access URL: `/<SWAGGER_PATH>` (default: `/internal/docs-admin-reference`)
+- Access control: HTTP Basic Auth credentials must match an existing user with role `ADMIN`
+  - username: admin email
+  - password: admin account password
 
 ## License
 
