@@ -31,8 +31,128 @@
     } @else if (creatures().length === 0) {
       <p class="mt-4 text-sm text-slate-500">{{ 'myClub.empty' | t }}</p>
     } @else {
+      <div class="mt-4 grid gap-3 rounded-2xl border border-white/70 bg-white/70 p-4 lg:grid-cols-6">
+        <div class="lg:col-span-2">
+          <label class="mb-1 block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+            {{ 'myClub.filters.search' | t }}
+          </label>
+          <input
+            type="text"
+            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+            [value]="searchQuery()"
+            [placeholder]="'myClub.filters.searchPlaceholder' | t"
+            (input)="setSearchQuery($any($event.target).value)"
+          />
+        </div>
+
+        <div>
+          <label class="mb-1 block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+            {{ 'myClub.filters.rarity' | t }}
+          </label>
+          <select
+            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+            [value]="rarityFilter()"
+            (change)="setRarityFilter($any($event.target).value)"
+          >
+            <option value="ALL">{{ 'myClub.filters.all' | t }}</option>
+            <option value="COMMON">{{ 'rarity.common' | l10n: 'rarity' : 'COMMON' }}</option>
+            <option value="RARE">{{ 'rarity.rare' | l10n: 'rarity' : 'RARE' }}</option>
+            <option value="EPIC">{{ 'rarity.epic' | l10n: 'rarity' : 'EPIC' }}</option>
+            <option value="LEGENDARY">
+              {{ 'rarity.legendary' | l10n: 'rarity' : 'LEGENDARY' }}
+            </option>
+            <option value="MYTHIC">{{ 'rarity.mythic' | l10n: 'rarity' : 'MYTHIC' }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="mb-1 block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+            {{ 'myClub.filters.type' | t }}
+          </label>
+          <select
+            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+            [value]="typeFilter()"
+            (change)="setTypeFilter($any($event.target).value)"
+          >
+            <option value="ALL">{{ 'myClub.filters.all' | t }}</option>
+            @for (type of typeOptions(); track type) {
+              <option [value]="type">{{ type | l10n: 'type' : type }}</option>
+            }
+          </select>
+        </div>
+
+        <div>
+          <label class="mb-1 block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+            {{ 'myClub.filters.minLevel' | t }}
+          </label>
+          <input
+            type="number"
+            min="1"
+            max="100"
+            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+            [value]="minLevelFilter() ?? ''"
+            (input)="setMinLevelFilter($any($event.target).value)"
+          />
+        </div>
+
+        <div>
+          <label class="mb-1 block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+            {{ 'myClub.filters.maxLevel' | t }}
+          </label>
+          <input
+            type="number"
+            min="1"
+            max="100"
+            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+            [value]="maxLevelFilter() ?? ''"
+            (input)="setMaxLevelFilter($any($event.target).value)"
+          />
+        </div>
+
+        <div>
+          <label class="mb-1 block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+            {{ 'myClub.filters.sortBy' | t }}
+          </label>
+          <select
+            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+            [value]="sortBy()"
+            (change)="setSortBy($any($event.target).value)"
+          >
+            <option value="power">{{ 'myClub.sort.power' | t }}</option>
+            <option value="level">{{ 'myClub.sort.level' | t }}</option>
+            <option value="rarity">{{ 'myClub.sort.rarity' | t }}</option>
+            <option value="name">{{ 'myClub.sort.name' | t }}</option>
+            <option value="newest">{{ 'myClub.sort.newest' | t }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="mb-1 block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+            {{ 'myClub.filters.direction' | t }}
+          </label>
+          <select
+            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+            [value]="sortDirection()"
+            (change)="setSortDirection($any($event.target).value)"
+          >
+            <option value="desc">{{ 'myClub.sort.desc' | t }}</option>
+            <option value="asc">{{ 'myClub.sort.asc' | t }}</option>
+          </select>
+        </div>
+
+        <div class="flex items-end">
+          <button type="button" class="btn-poke-soft w-full px-3 py-2 text-xs" (click)="resetFilters()">
+            {{ 'myClub.filters.reset' | t }}
+          </button>
+        </div>
+      </div>
+
+      @if (filteredCreatures().length === 0) {
+        <p class="mt-4 text-sm text-slate-500">{{ 'myClub.filters.noResults' | t }}</p>
+      }
+
       <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        @for (creature of creatures(); track creature.id) {
+        @for (creature of filteredCreatures(); track creature.id) {
           <div class="space-y-2">
             <app-pokemon-card [creature]="creature" />
             <button

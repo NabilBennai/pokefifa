@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 import { MyCreatureItem } from '../../core/models/creature.models';
 import { LanguageService } from '../../core/i18n/language.service';
@@ -14,6 +14,14 @@ import { TranslatePipe } from '../../shared/pipes/t.pipe';
   templateUrl: './my-club.page.html',
 })
 export class MyClubPageComponent {
+  private static readonly rarityOrder: Record<MyCreatureItem['species']['rarity'], number> = {
+    COMMON: 1,
+    RARE: 2,
+    EPIC: 3,
+    LEGENDARY: 4,
+    MYTHIC: 5,
+  };
+
   private readonly creaturesService = inject(CreaturesService);
   private readonly languageService = inject(LanguageService);
 
@@ -25,6 +33,108 @@ export class MyClubPageComponent {
   protected readonly savingMoves = signal(false);
   protected readonly moveEditorError = signal<string | null>(null);
   protected readonly moveEditorSuccess = signal<string | null>(null);
+  protected readonly searchQuery = signal('');
+  protected readonly rarityFilter = signal<'ALL' | MyCreatureItem['species']['rarity']>('ALL');
+  protected readonly typeFilter = signal<'ALL' | string>('ALL');
+  protected readonly minLevelFilter = signal<number | null>(null);
+  protected readonly maxLevelFilter = signal<number | null>(null);
+  protected readonly sortBy = signal<'name' | 'level' | 'power' | 'rarity' | 'newest'>('power');
+  protected readonly sortDirection = signal<'asc' | 'desc'>('desc');
+
+  protected readonly typeOptions = computed(() => {
+    const types = new Set<string>();
+    for (const creature of this.creatures()) {
+      types.add(creature.species.primaryType);
+      if (creature.species.secondaryType) {
+        types.add(creature.species.secondaryType);
+      }
+    }
+
+    return [...types].sort((a, b) => a.localeCompare(b));
+  });
+
+  protected readonly filteredCreatures = computed(() => {
+    const query = this.searchQuery().trim().toLowerCase();
+    const rarity = this.rarityFilter();
+    const type = this.typeFilter();
+    const minLevel = this.minLevelFilter();
+    const maxLevel = this.maxLevelFilter();
+    const sortBy = this.sortBy();
+    const direction = this.sortDirection() === 'asc' ? 1 : -1;
+
+    const list = this.creatures().filter((creature) => {
+      if (query.length > 0) {
+        const translatedName = this.localizedPokemonName(creature).toLowerCase();
+        const nickname = creature.nickname?.toLowerCase() ?? '';
+        const speciesName = creature.species.name.toLowerCase();
+        const slug = creature.species.slug.toLowerCase();
+        const matchesQuery =
+          nickname.includes(query) ||
+          speciesName.includes(query) ||
+          slug.includes(query) ||
+          translatedName.includes(query);
+        if (!matchesQuery) {
+          return false;
+        }
+      }
+
+      if (rarity !== 'ALL' && creature.species.rarity !== rarity) {
+        return false;
+      }
+
+      if (type !== 'ALL') {
+        const primary = creature.species.primaryType.toLowerCase();
+        const secondary = creature.species.secondaryType?.toLowerCase() ?? '';
+        if (primary !== type.toLowerCase() && secondary !== type.toLowerCase()) {
+          return false;
+        }
+      }
+
+      if (minLevel !== null && creature.level < minLevel) {
+        return false;
+      }
+
+      if (maxLevel !== null && creature.level > maxLevel) {
+        return false;
+      }
+
+      return true;
+    });
+
+    list.sort((a, b) => {
+      if (sortBy === 'name') {
+        return (
+          this.creatureDisplayName(a).localeCompare(this.creatureDisplayName(b), undefined, {
+            sensitivity: 'base',
+          }) * direction
+        );
+      }
+
+      if (sortBy === 'level') {
+        return (a.level - b.level) * direction;
+      }
+
+      if (sortBy === 'rarity') {
+        const rankDiff =
+          MyClubPageComponent.rarityOrder[a.species.rarity] -
+          MyClubPageComponent.rarityOrder[b.species.rarity];
+        if (rankDiff !== 0) {
+          return rankDiff * direction;
+        }
+        return (this.computePower(a) - this.computePower(b)) * direction;
+      }
+
+      if (sortBy === 'newest') {
+        return (
+          (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * direction
+        );
+      }
+
+      return (this.computePower(a) - this.computePower(b)) * direction;
+    });
+
+    return list;
+  });
 
   constructor() {
     this.loadCreatures();
@@ -163,9 +273,90 @@ export class MyClubPageComponent {
     return this.translateMoveName(slug, fallback);
   }
 
+  protected setSearchQuery(value: string): void {
+    this.searchQuery.set(value);
+  }
+
+  protected setRarityFilter(value: string): void {
+    if (value === 'ALL') {
+      this.rarityFilter.set('ALL');
+      return;
+    }
+
+    const valid = ['COMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'] as const;
+    if (valid.includes(value as (typeof valid)[number])) {
+      this.rarityFilter.set(value as MyCreatureItem['species']['rarity']);
+    }
+  }
+
+  protected setTypeFilter(value: string): void {
+    this.typeFilter.set(value === 'ALL' ? 'ALL' : value);
+  }
+
+  protected setMinLevelFilter(raw: string): void {
+    this.minLevelFilter.set(this.parseLevelFilter(raw));
+  }
+
+  protected setMaxLevelFilter(raw: string): void {
+    this.maxLevelFilter.set(this.parseLevelFilter(raw));
+  }
+
+  protected setSortBy(value: string): void {
+    const valid = ['name', 'level', 'power', 'rarity', 'newest'] as const;
+    if (valid.includes(value as (typeof valid)[number])) {
+      this.sortBy.set(value as 'name' | 'level' | 'power' | 'rarity' | 'newest');
+    }
+  }
+
+  protected setSortDirection(value: string): void {
+    if (value === 'asc' || value === 'desc') {
+      this.sortDirection.set(value);
+    }
+  }
+
+  protected resetFilters(): void {
+    this.searchQuery.set('');
+    this.rarityFilter.set('ALL');
+    this.typeFilter.set('ALL');
+    this.minLevelFilter.set(null);
+    this.maxLevelFilter.set(null);
+    this.sortBy.set('power');
+    this.sortDirection.set('desc');
+  }
+
   private translateMoveName(slug: string, fallback: string): string {
     const key = `move.${slug}`;
     const translated = this.languageService.t(key);
     return translated === key ? fallback : translated;
+  }
+
+  private parseLevelFilter(raw: string): number | null {
+    const parsed = Number.parseInt(raw, 10);
+    if (!Number.isFinite(parsed)) {
+      return null;
+    }
+    return Math.max(1, Math.min(100, parsed));
+  }
+
+  private computePower(creature: MyCreatureItem): number {
+    const species = creature.species;
+    return (
+      species.baseHp +
+      species.baseAttack +
+      species.baseDefense +
+      species.baseSpAttack +
+      species.baseSpDefense +
+      species.baseSpeed
+    );
+  }
+
+  private localizedPokemonName(creature: MyCreatureItem): string {
+    const key = `pokemon.${creature.species.slug}`;
+    const translated = this.languageService.t(key);
+    return translated === key ? creature.species.name : translated;
+  }
+
+  private creatureDisplayName(creature: MyCreatureItem): string {
+    return creature.nickname?.trim() || this.localizedPokemonName(creature);
   }
 }
